@@ -1,0 +1,27 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicedoc/schemas/refs/heads/master/tauri/2/tauri.conf.json",
+  "productName": "XML Explorer Native Spike",
+  "version": "0.1.0",
+  "identifier": "io.github.xmlexplorer.native",
+  "build": {
+    "frontendDist": "https://xmlexplorer.github.io",
+    "devUrl": "https://xmlexplorer.github.io",
+    "beforeDevCommand": "",
+    "beforeBuildCommand": ""
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "XML Explorer Native Spike",
+        "width": 1024,
+        "height": 768
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": false
+  }
+}

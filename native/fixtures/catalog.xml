@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<catalog>
+  <!-- inventory listing -->
+  <book id="bk101">
+    <title>XML Developer's Guide</title>
+    <price>44.95</price>
+    <cover/>
+  </book>
+  <book id="bk102">
+    <title>Midnight Rain</title>
+    <price>5.95</price>
+  </book>
+</catalog>
