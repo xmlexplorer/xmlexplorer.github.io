@@ -2,8 +2,9 @@ import { CaretDownFilled, CopyOutlined, LoadingOutlined } from '@ant-design/icon
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { Dropdown, Spin, message, theme, Tree, type TreeDataNode } from 'antd';
 import type { ComponentRef, Key } from 'react';
-import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { forwardRef, use, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ThemeNameContext } from '../hooks/useThemeName';
 import { paintFrame } from '../lib/paintFrame';
 import { getChildren, getFormattedOuterXml, getNodePath, type NodeSummary } from '../lib/tauri';
 import {
@@ -14,7 +15,9 @@ import {
   toTreeNode,
   visibleChildren,
   withChildrenAt,
+  type XmlTreeDataNode,
 } from '../lib/treeData';
+import { tokenizeXmlLabel, type XmlLabelTokenKind } from '../lib/xmlLabelTokens';
 import './XmlTree.css';
 
 export interface XmlTreeHandle {
@@ -82,12 +85,47 @@ function labelOf(node: TreeDataNode | undefined): string {
   return typeof node?.title === 'string' ? node.title : '';
 }
 
+// Lifted from VS Code's built-in "2026 Dark"/"2026 Light" theme JSON
+// (theme-defaults/themes/2026-dark.json, 2026-light.json) -- entity.name.tag,
+// the "entity" catch-all (attribute names fall through to it), string,
+// meta.jsx.children (a node's own text content, as opposed to an attribute
+// value), and comment, respectively. Delimiters are left unset to inherit the
+// tree's default text color, matching that theme's own punctuation, which
+// isn't recolored either.
+const DARK_TOKEN_COLORS: Partial<Record<XmlLabelTokenKind, string>> = {
+  tagName: '#7ee787',
+  attrName: '#79c0ff',
+  attrValue: '#a5d6ff',
+  text: '#ffa657',
+  comment: '#8b949e',
+};
+
+const LIGHT_TOKEN_COLORS: Partial<Record<XmlLabelTokenKind, string>> = {
+  tagName: '#116329',
+  attrName: '#0550ae',
+  attrValue: '#0a3069',
+  text: '#953800',
+  comment: '#6e7781',
+};
+
+// editor.background from the same two theme JSON files.
+const DARK_EDITOR_BG = '#121314';
+const LIGHT_EDITOR_BG = '#FFFFFF';
+
 export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
   { docId, root, height, width, onSelectNode },
   ref,
 ) {
   const { t } = useTranslation();
-  const { token: { colorBorder, borderRadius } } = theme.useToken();
+  const {
+    token: { colorBorder, borderRadius },
+  } = theme.useToken();
+  // isDarkMode picks which of VS Code's two palettes above to use; the app's
+  // antd theme tracks the same light/dark/auto preference, so this stays in
+  // sync with it automatically.
+  const isDarkMode = use(ThemeNameContext)?.isDarkMode ?? false;
+  const tokenColors = isDarkMode ? DARK_TOKEN_COLORS : LIGHT_TOKEN_COLORS;
+  const editorBg = isDarkMode ? DARK_EDITOR_BG : LIGHT_EDITOR_BG;
 
   const [treeData, setTreeDataState] = useState<TreeDataNode[]>([toTreeNode(root)]);
   // A ref mirror of treeData so reveal() can read the just-loaded children
@@ -296,7 +334,17 @@ export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
     // The fixed-height wrapper + .xml-tree-fill CSS forces antd's virtual scroll
     // viewport to fill the available area (instead of collapsing to the expanded
     // nodes' height), so the horizontal scrollbar stays pinned at the bottom.
-    <div className="xml-tree-fill" style={{ height, borderWidth: 1, borderStyle: 'solid', borderColor: colorBorder, borderRadius }}>
+    <div
+      className="xml-tree-fill"
+      style={{
+        height,
+        borderWidth: 1,
+        borderStyle: 'solid',
+        borderColor: colorBorder,
+        borderRadius,
+        backgroundColor: editorBg,
+      }}
+    >
       {/* trigger=['contextMenu'] gives antd's own alignPoint positioning (menu
           follows the cursor) and auto-close-on-outside-click for free; we only
           need to track which node the right-click landed on (onRightClick above). */}
@@ -335,14 +383,34 @@ export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
             // node.title is always a string in our data, but antd types it as a
             // ReactNode-or-render-function; resolve it to a node rather than stringify.
             const title = typeof node.title === 'function' ? node.title(node) : node.title;
+            // antd's own callback signature only knows about plain DataNode, so the
+            // nodeType toTreeNode attached (see XmlTreeDataNode) needs a cast to read
+            // back here -- the underlying objects are the same ones from treeData.
+            const nodeType = (node as XmlTreeDataNode).nodeType;
+            const tokens =
+              typeof title === 'string' && nodeType ? tokenizeXmlLabel(title, nodeType) : null;
             return (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                {title}
+                {/* One wrapping span, not a fragment: gap above is meant to space the
+                    title from the spinner, but applies to every direct flex child --
+                    without this wrapper each colored token would get its own 6px gap. */}
+                <span>
+                  {tokens
+                    ? tokens.map((token, i) => (
+                        <span key={i} style={{ color: tokenColors[token.kind] }}>
+                          {token.text}
+                        </span>
+                      ))
+                    : title}
+                </span>
                 {isLoading && <Spin size="small" />}
               </span>
             );
           }}
-          style={{ fontFamily: 'monospace', whiteSpace: 'pre' }}
+          // antd's own .ant-tree rule paints its own background (colorBgContainer)
+          // over whatever the wrapper div behind it has, so the editor-background
+          // match has to be set here too, not just on the wrapper.
+          style={{ fontFamily: 'monospace', whiteSpace: 'pre', backgroundColor: editorBg }}
         />
       </Dropdown>
     </div>

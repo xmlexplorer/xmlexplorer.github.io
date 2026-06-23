@@ -31,7 +31,7 @@ export function AppContent() {
   const [contentHeight, setContentHeight] = useState(0);
   const [contentWidth, setContentWidth] = useState(0);
 
-  const { token: { colorBgContainer, colorBgBase } } = theme.useToken();
+  const { token: { colorBgContainer } } = theme.useToken();
 
   const themeNameContext = use(ThemeNameContext);
   const isDarkMode = themeNameContext?.isDarkMode ?? false;
@@ -94,7 +94,7 @@ export function AppContent() {
       <DropOverlay isDragging={isDragging} invalidDrop={invalidDrop} />
       <Layout style={{ height: '100%' }}>
 
-        <Layout.Header style={{ backgroundColor: colorBgBase, height: 'auto', lineHeight: 'normal', padding: 4, display: 'flex', alignItems: 'center' }}>
+        <Layout.Header style={{ backgroundColor: colorBgContainer, height: 'auto', lineHeight: 'normal', padding: 4, display: 'flex', alignItems: 'center' }}>
 
           <Space wrap align="center">
             {/* <span style={{ marginRight: 8, fontFamily: 'inherit' }}>XML Explorer</span> */}

@@ -1,6 +1,6 @@
 import type { TreeDataNode } from 'antd';
 import type { Key } from 'react';
-import type { NodeSummary } from './tauri';
+import type { NodeSummary, NodeType } from './tauri';
 
 // Some real documents have nodes with millions of direct children (a flat list of
 // sibling records). get_children already returns those in bounded pages rather than
@@ -8,11 +8,20 @@ import type { NodeSummary } from './tauri';
 // fetches and splices in the next page, instead of ever holding/rendering everything.
 export const LOAD_MORE_PREFIX = 'load-more:';
 
-export function toTreeNode(node: NodeSummary): TreeDataNode {
+// TreeDataNode plus the source node's type, so titleRender can syntax-highlight
+// the label (tag vs attribute vs comment, etc.) without re-deriving it from the
+// label string's shape.
+export interface XmlTreeDataNode extends TreeDataNode {
+  nodeType?: NodeType;
+  children?: XmlTreeDataNode[];
+}
+
+export function toTreeNode(node: NodeSummary): XmlTreeDataNode {
   return {
     key: String(node.nodeId),
     title: node.label,
     isLeaf: !node.hasChildren,
+    nodeType: node.nodeType,
   };
 }
 

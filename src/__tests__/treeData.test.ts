@@ -22,6 +22,7 @@ describe('toTreeNode', () => {
       key: '5',
       title: '<book>',
       isLeaf: false,
+      nodeType: 'element',
     });
     expect(
       toTreeNode({ nodeId: 6, nodeType: 'element', label: '<cover/>', hasChildren: false, value: null })
