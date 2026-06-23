@@ -12,6 +12,7 @@ use document::DocumentStore;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .manage(DocumentStore::default())
         .invoke_handler(tauri::generate_handler![
             spike::spike_open_and_query,

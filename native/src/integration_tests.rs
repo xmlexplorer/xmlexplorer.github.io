@@ -24,22 +24,23 @@ fn get_children_is_lazy_and_idempotent() {
     let store = DocumentStore::default();
     let opened = store.open(&fixture("catalog.xml")).expect("open catalog.xml");
 
-    let first_call = get_children(&store, opened.doc_id, opened.root.node_id).expect("get_children");
+    let first_call = get_children(&store, opened.doc_id, opened.root.node_id, 0).expect("get_children");
     // whitespace text nodes between elements + the comment + two <book> elements
     // note the double space before "-->": the source comment text itself already has a
     // trailing space (`<!-- inventory listing -->`), and build_label always appends its own
     // " -->" unconditionally -- this matches XPathNavigatorTreeNode.GetDisplayText exactly,
     // artifact and all.
-    assert!(first_call.iter().any(|n| n.node_type == "comment" && n.label == "<!-- inventory listing  -->"));
-    let books: Vec<_> = first_call.iter().filter(|n| n.node_type == "element" && n.label.starts_with("<book")).collect();
+    assert!(first_call.items.iter().any(|n| n.node_type == "comment" && n.label == "<!-- inventory listing  -->"));
+    let books: Vec<_> = first_call.items.iter().filter(|n| n.node_type == "element" && n.label.starts_with("<book")).collect();
     assert_eq!(books.len(), 2);
     assert_eq!(books[0].label, "<book id=\"bk101\">");
+    assert!(!first_call.has_more, "catalog.xml's small child list should fit in a single page");
 
     // second call should return the same (memoized) ids, not duplicate arena entries
-    let second_call = get_children(&store, opened.doc_id, opened.root.node_id).expect("get_children again");
+    let second_call = get_children(&store, opened.doc_id, opened.root.node_id, 0).expect("get_children again");
     assert_eq!(
-        first_call.iter().map(|n| n.node_id).collect::<Vec<_>>(),
-        second_call.iter().map(|n| n.node_id).collect::<Vec<_>>()
+        first_call.items.iter().map(|n| n.node_id).collect::<Vec<_>>(),
+        second_call.items.iter().map(|n| n.node_id).collect::<Vec<_>>()
     );
 }
 
@@ -48,11 +49,11 @@ fn self_closing_element_has_no_children() {
     let store = DocumentStore::default();
     let opened = store.open(&fixture("catalog.xml")).expect("open catalog.xml");
 
-    let top = get_children(&store, opened.doc_id, opened.root.node_id).unwrap();
-    let first_book = top.iter().find(|n| n.label == "<book id=\"bk101\">").unwrap();
+    let top = get_children(&store, opened.doc_id, opened.root.node_id, 0).unwrap();
+    let first_book = top.items.iter().find(|n| n.label == "<book id=\"bk101\">").unwrap();
 
-    let book_children = get_children(&store, opened.doc_id, first_book.node_id).unwrap();
-    let cover = book_children.iter().find(|n| n.label.starts_with("<cover")).unwrap();
+    let book_children = get_children(&store, opened.doc_id, first_book.node_id, 0).unwrap();
+    let cover = book_children.items.iter().find(|n| n.label.starts_with("<cover")).unwrap();
     assert_eq!(cover.label, "<cover/>");
     assert!(!cover.has_children);
 }
@@ -122,8 +123,8 @@ fn formatted_outer_xml_is_indented() {
     let store = DocumentStore::default();
     let opened = store.open(&fixture("catalog.xml")).expect("open catalog.xml");
 
-    let top = get_children(&store, opened.doc_id, opened.root.node_id).unwrap();
-    let first_book = top.iter().find(|n| n.label == "<book id=\"bk101\">").unwrap();
+    let top = get_children(&store, opened.doc_id, opened.root.node_id, 0).unwrap();
+    let first_book = top.items.iter().find(|n| n.label == "<book id=\"bk101\">").unwrap();
 
     let xml = get_formatted_outer_xml(&store, opened.doc_id, first_book.node_id).expect("get_formatted_outer_xml");
     assert!(xml.contains("<book id=\"bk101\">"));
@@ -152,13 +153,28 @@ fn large_fixture_open_and_expand_is_fast() {
     println!("open: {:?}", start.elapsed());
     assert_eq!(opened.root.label, "<catalog>");
 
+    // The root has 1.18M <item> children once insignificant whitespace text nodes
+    // (the indentation between pretty-printed siblings) are filtered out -- get_children
+    // must return only one bounded page of these, not all of them, or serializing the
+    // full set over IPC is exactly what froze the real app's UI when this fixture's
+    // root was expanded.
     let start = Instant::now();
-    let children = get_children(&store, opened.doc_id, opened.root.node_id).expect("get_children on root");
-    println!("get_children(root) -> {} children (incl. whitespace text nodes) in {:?}", children.len(), start.elapsed());
-    let item_children: Vec<_> = children.iter().filter(|n| n.node_type == "element").collect();
-    assert_eq!(item_children.len(), 1_178_422);
+    let page = get_children(&store, opened.doc_id, opened.root.node_id, 0).expect("get_children on root");
+    println!(
+        "get_children(root) -> page of {} (of {} total children) in {:?}",
+        page.items.len(),
+        page.total,
+        start.elapsed()
+    );
+    assert_eq!(page.total, 1_178_422);
+    assert!(page.has_more);
+    assert!(page.items.len() <= crate::tree::CHILDREN_PAGE_SIZE);
+    assert!(page.items.iter().all(|n| n.node_type == "element"), "whitespace text nodes should be filtered out");
 
-    let first_item = item_children.first().expect("at least one item");
+    let first_item = page
+        .items
+        .first()
+        .expect("at least one element in the first page");
     let start = Instant::now();
     let results = evaluate_xpath(&store, opened.doc_id, opened.root.node_id, "//item")
         .expect("evaluate_xpath //item");
