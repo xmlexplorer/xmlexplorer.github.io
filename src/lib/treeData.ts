@@ -58,6 +58,37 @@ export function withChildrenAt(
   });
 }
 
+export function isLoadMoreKey(key: Key): boolean {
+  return typeof key === 'string' && key.startsWith(LOAD_MORE_PREFIX);
+}
+
+// Depth-first lookup of the node with the given key, or undefined if not loaded.
+export function findNode(list: TreeDataNode[], key: Key): TreeDataNode | undefined {
+  for (const node of list) {
+    if (node.key === key) {
+      return node;
+    }
+    if (node.children) {
+      const found = findNode(node.children, key);
+      if (found) {
+        return found;
+      }
+    }
+  }
+  return undefined;
+}
+
+// The real (non-"Load more...") children of a node -- the rows that correspond to
+// actual document nodes, in the order get_node_path indexes them.
+export function visibleChildren(node: TreeDataNode | undefined): TreeDataNode[] {
+  return (node?.children ?? []).filter((c) => !isLoadMoreKey(c.key));
+}
+
+// Whether a node still has an unfetched next page (a "Load more..." placeholder).
+export function hasLoadMore(node: TreeDataNode | undefined): boolean {
+  return (node?.children ?? []).some((c) => isLoadMoreKey(c.key));
+}
+
 // Splices a freshly fetched page of children onto the node `parentKey`, dropping any
 // prior "Load more..." placeholder and appending a new one when more pages remain.
 // Factored out of the component so the pagination-merge logic is unit-testable.

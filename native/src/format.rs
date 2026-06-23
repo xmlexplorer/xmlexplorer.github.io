@@ -43,8 +43,10 @@ pub fn get_formatted_outer_xml(
     })
 }
 
+// async so serializing a large subtree runs off the main (UI) thread -- see the
+// note on evaluate_xpath_cmd.
 #[tauri::command]
-pub fn get_formatted_outer_xml_cmd(
+pub async fn get_formatted_outer_xml_cmd(
     store: tauri::State<'_, DocumentStore>,
     doc_id: u64,
     node_id: u64,

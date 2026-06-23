@@ -19,6 +19,7 @@ pub fn run() {
             document::open_document_cmd,
             document::close_document_cmd,
             tree::get_children_cmd,
+            tree::get_node_path_cmd,
             xpath::list_namespaces_cmd,
             xpath::evaluate_xpath_cmd,
             validate::validate_document_cmd,

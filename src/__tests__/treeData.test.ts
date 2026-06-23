@@ -4,22 +4,29 @@ import {
   LOAD_MORE_PREFIX,
   decodeLoadMoreKey,
   encodeLoadMoreKey,
+  findNode,
+  hasLoadMore,
+  isLoadMoreKey,
   loadMoreNode,
   mergePage,
   toTreeNode,
+  visibleChildren,
   withChildrenAt,
 } from '../lib/treeData';
 
 describe('toTreeNode', () => {
   it('maps a summary to a tree node, stringifying the id and inverting hasChildren to isLeaf', () => {
-    expect(toTreeNode({ nodeId: 5, nodeType: 'element', label: '<book>', hasChildren: true })).toEqual({
+    expect(
+      toTreeNode({ nodeId: 5, nodeType: 'element', label: '<book>', hasChildren: true, value: null }),
+    ).toEqual({
       key: '5',
       title: '<book>',
       isLeaf: false,
     });
-    expect(toTreeNode({ nodeId: 6, nodeType: 'element', label: '<cover/>', hasChildren: false }).isLeaf).toBe(
-      true,
-    );
+    expect(
+      toTreeNode({ nodeId: 6, nodeType: 'element', label: '<cover/>', hasChildren: false, value: null })
+        .isLeaf,
+    ).toBe(true);
   });
 });
 
@@ -84,6 +91,42 @@ describe('withChildrenAt', () => {
       return [];
     });
     expect(seen).toEqual([undefined]);
+  });
+});
+
+describe('tree-walking helpers (used by reveal)', () => {
+  const tree: TreeDataNode[] = [
+    {
+      key: '0',
+      title: 'root',
+      children: [
+        { key: '1', title: 'a' },
+        { key: '2', title: 'b', children: [{ key: '3', title: 'b1' }] },
+        loadMoreNode('0', 2, 5),
+      ],
+    },
+  ];
+
+  it('isLoadMoreKey distinguishes placeholders from real keys', () => {
+    expect(isLoadMoreKey(encodeLoadMoreKey('0', 2))).toBe(true);
+    expect(isLoadMoreKey('2')).toBe(false);
+    expect(isLoadMoreKey(2)).toBe(false);
+  });
+
+  it('findNode locates a deeply nested node and returns undefined when absent', () => {
+    expect(findNode(tree, '3')?.title).toBe('b1');
+    expect(findNode(tree, 'nope')).toBeUndefined();
+  });
+
+  it('visibleChildren excludes the Load more placeholder', () => {
+    const root = findNode(tree, '0');
+    expect(visibleChildren(root).map((n) => n.key)).toEqual(['1', '2']);
+    expect(visibleChildren(findNode(tree, '1'))).toEqual([]); // no children -> empty
+  });
+
+  it('hasLoadMore reflects whether a next page remains', () => {
+    expect(hasLoadMore(findNode(tree, '0'))).toBe(true);
+    expect(hasLoadMore(findNode(tree, '2'))).toBe(false);
   });
 });
 

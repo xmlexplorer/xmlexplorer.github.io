@@ -116,8 +116,10 @@ pub fn validate_document(store: &DocumentStore, doc_id: u64) -> Result<Vec<Valid
     })
 }
 
+// async so schema validation runs off the main (UI) thread -- see the note on
+// evaluate_xpath_cmd.
 #[tauri::command]
-pub fn validate_document_cmd(
+pub async fn validate_document_cmd(
     store: tauri::State<'_, DocumentStore>,
     doc_id: u64,
 ) -> Result<Vec<ValidationIssue>, String> {

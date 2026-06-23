@@ -22,6 +22,22 @@ pub struct OpenDocument {
     /// since computing it requires walking every element in the document --
     /// expensive to redo on every `evaluate_xpath` call on a large document.
     pub namespaces_cache: Option<Vec<(String, String)>>,
+    /// The node-set result of the most recent XPath query, so paging through a
+    /// large result set doesn't re-run the (potentially document-wide) query.
+    /// Keyed by context node + expression: a different query replaces it.
+    pub xpath_cache: Option<XPathCache>,
+}
+
+/// The node-set matched by the most recent XPath query. Holds the matched node
+/// handles directly and only assigns each an arena id (`ids[i]`) lazily, when a
+/// page containing it is actually built -- so querying e.g. `//item` on a
+/// million-match document doesn't push a million entries into the arena up front
+/// when only one 500-row page is ever shown.
+pub struct XPathCache {
+    pub node_id: u64,
+    pub expression: String,
+    pub nodes: Vec<Node>,
+    pub ids: Vec<Option<u64>>,
 }
 
 // SAFETY: libxml2's `Document`/`Node` wrap `Rc<RefCell<_>>` internally, so they
@@ -63,6 +79,7 @@ impl DocumentStore {
             nodes: vec![root],
             expanded: HashMap::new(),
             namespaces_cache: None,
+            xpath_cache: None,
         };
 
         let doc_id = self.next_doc_id.fetch_add(1, Ordering::SeqCst);
@@ -93,8 +110,10 @@ impl DocumentStore {
     }
 }
 
+// async so parsing a large file runs off the main (UI) thread -- see the note on
+// evaluate_xpath_cmd. No .await spans the !Send libxml work.
 #[tauri::command]
-pub fn open_document_cmd(
+pub async fn open_document_cmd(
     store: tauri::State<'_, DocumentStore>,
     path: String,
 ) -> Result<OpenedDocument, String> {

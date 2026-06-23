@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "start": "npm run native",
-    "test": "npm run lint && npm run typecheck && npm run vitest",
+    "test": "npm run lint && npm run typecheck && npm run vitest && npm run test:rust",
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "preview": "vite preview",
     "vitest": "vitest run",
+    "test:rust": "cargo test --manifest-path native/Cargo.toml",
     "lint": "eslint",
     "native": "npx tauri dev --config native/tauri.conf.json",
     "native:build": "npx tauri build --config native/tauri.conf.json"

@@ -1,0 +1,19 @@
+/*
+ * antd's virtual Tree sizes its scroll viewport to the content, not to the
+ * available box: rc-tree hard-codes fullHeight:false, so the holder gets an
+ * inline maxHeight instead of height and collapses to the expanded nodes'
+ * height -- dragging the (bottom:0) horizontal scrollbar up under the last row.
+ * Forcing the root -> list -> holder chain to fill the fixed-height wrapper
+ * makes the viewport span the whole area, so the horizontal scrollbar always
+ * sits at the bottom. (We set `height`, which doesn't collide with the inline
+ * `maxHeight`, so no !important is needed.)
+ */
+.xml-tree-fill {
+  height: 100%;
+}
+
+.xml-tree-fill > .ant-tree,
+.xml-tree-fill .ant-tree-list,
+.xml-tree-fill .ant-tree-list-holder {
+  height: 100%;
+}

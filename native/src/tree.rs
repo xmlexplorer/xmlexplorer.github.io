@@ -9,6 +9,53 @@ pub struct NodeSummary {
     pub node_type: &'static str,
     pub label: String,
     pub has_children: bool,
+    /// For an element whose content is plain text (no child elements), a trimmed,
+    /// length-capped preview of that text -- e.g. `Some("Widget 0")` for
+    /// `<name>Widget 0</name>`. None for elements with child elements, empty
+    /// elements, and non-element nodes. Used to make flat XPath result lists
+    /// scannable; the tree ignores it.
+    pub value: Option<String>,
+}
+
+/// Cap on the `value` text preview, so an element holding a megabyte of text
+/// doesn't serialize that whole blob per result row.
+const VALUE_PREVIEW_MAX: usize = 200;
+
+/// If `node` is an element whose children are all text/cdata (no child elements),
+/// returns a trimmed, capped preview of its text content; otherwise None. Only the
+/// immediate children are scanned, so this stays cheap.
+fn simple_text_value(node: &Node) -> Option<String> {
+    if node.get_type() != Some(NodeType::ElementNode) {
+        return None;
+    }
+    let mut has_text = false;
+    let mut child = node.get_first_child();
+    while let Some(c) = child {
+        match c.get_type() {
+            Some(NodeType::ElementNode) => return None,
+            Some(NodeType::TextNode) | Some(NodeType::CDataSectionNode) => {
+                if !c.get_content().trim().is_empty() {
+                    has_text = true;
+                }
+            }
+            _ => {}
+        }
+        child = c.get_next_sibling();
+    }
+    if !has_text {
+        return None;
+    }
+    let text = strip_non_printable(&node.get_content());
+    let trimmed = text.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    if trimmed.chars().count() > VALUE_PREVIEW_MAX {
+        let preview: String = trimmed.chars().take(VALUE_PREVIEW_MAX).collect();
+        Some(format!("{preview}…"))
+    } else {
+        Some(trimmed.to_string())
+    }
 }
 
 /// Real documents can have nodes with millions of direct children (e.g. a flat
@@ -26,7 +73,11 @@ pub struct NodeSummaryPage {
     pub has_more: bool,
 }
 
-fn page_of(ids: &[u64], offset: usize, open_doc: &OpenDocument) -> Result<NodeSummaryPage, String> {
+pub(crate) fn page_of(
+    ids: &[u64],
+    offset: usize,
+    open_doc: &OpenDocument,
+) -> Result<NodeSummaryPage, String> {
     let total = ids.len();
     let items: Vec<NodeSummary> = ids
         .iter()
@@ -123,6 +174,7 @@ pub fn build_node_summary(node_id: u64, node: &Node) -> NodeSummary {
         node_type: node_type_name(node),
         label: build_label(node),
         has_children: has_visible_children(node),
+        value: simple_text_value(node),
     }
 }
 
@@ -157,12 +209,63 @@ pub fn get_children(
     })
 }
 
+// async so heavy traversal runs off the main (UI) thread -- see the note on
+// evaluate_xpath_cmd. The !Send libxml work stays inside the synchronous helper.
 #[tauri::command]
-pub fn get_children_cmd(
+pub async fn get_children_cmd(
     store: tauri::State<'_, DocumentStore>,
     doc_id: u64,
     node_id: u64,
     offset: usize,
 ) -> Result<NodeSummaryPage, String> {
     get_children(store.inner(), doc_id, node_id, offset)
+}
+
+/// Returns the path from the document's root element down to `node_id`, as the
+/// sequence of child positions to follow at each level. Positions count only the
+/// children `get_children` exposes -- i.e. insignificant whitespace is skipped --
+/// so the frontend can walk the same lazily-loaded tree to reveal/select the node
+/// (e.g. jumping to an XPath match). Empty when the node *is* the root.
+///
+/// Attribute nodes aren't shown as their own tree rows (they render inline in the
+/// owner element's label), so an attribute resolves to its owner element's path.
+pub fn get_node_path(store: &DocumentStore, doc_id: u64, node_id: u64) -> Result<Vec<usize>, String> {
+    store.with_document_mut(doc_id, |open_doc| {
+        let mut current = open_doc.get_node(node_id)?.clone();
+        if current.get_type() == Some(NodeType::AttributeNode) {
+            current = current
+                .get_parent()
+                .ok_or_else(|| "attribute node has no owner element".to_string())?;
+        }
+
+        let mut path = Vec::new();
+        while let Some(parent) = current.get_parent() {
+            // The root element's parent is the document node -- stop there, since the
+            // root itself isn't a step in a path expressed relative to it.
+            if parent.get_type() == Some(NodeType::DocumentNode) {
+                break;
+            }
+            let mut index = 0usize;
+            let mut sibling = current.get_prev_sibling();
+            while let Some(s) = sibling {
+                if !is_insignificant_whitespace(&s) {
+                    index += 1;
+                }
+                sibling = s.get_prev_sibling();
+            }
+            path.push(index);
+            current = parent;
+        }
+        path.reverse();
+        Ok(path)
+    })
+}
+
+#[tauri::command]
+pub async fn get_node_path_cmd(
+    store: tauri::State<'_, DocumentStore>,
+    doc_id: u64,
+    node_id: u64,
+) -> Result<Vec<usize>, String> {
+    get_node_path(store.inner(), doc_id, node_id)
 }
