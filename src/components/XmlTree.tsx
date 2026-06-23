@@ -1,9 +1,11 @@
-import { CaretDownFilled, LoadingOutlined } from '@ant-design/icons';
-import { Spin, theme, Tree, type TreeDataNode } from 'antd';
+import { CaretDownFilled, CopyOutlined, LoadingOutlined } from '@ant-design/icons';
+import { writeText } from '@tauri-apps/plugin-clipboard-manager';
+import { Dropdown, Spin, message, theme, Tree, type TreeDataNode } from 'antd';
 import type { ComponentRef, Key } from 'react';
 import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { paintFrame } from '../lib/paintFrame';
-import { getChildren, getNodePath, type NodeSummary } from '../lib/tauri';
+import { getChildren, getFormattedOuterXml, getNodePath, type NodeSummary } from '../lib/tauri';
 import {
   decodeLoadMoreKey,
   findNode,
@@ -84,6 +86,7 @@ export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
   { docId, root, height, width, onSelectNode },
   ref,
 ) {
+  const { t } = useTranslation();
   const { token: { colorBorder, borderRadius } } = theme.useToken();
 
   const [treeData, setTreeDataState] = useState<TreeDataNode[]>([toTreeNode(root)]);
@@ -191,6 +194,55 @@ export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
     [loadPageInto, onSelectNode],
   );
 
+  // The node a right-click last landed on, so the context menu (positioned by
+  // antd's own contextMenu trigger -- see the wrapping Dropdown below) knows
+  // what to act on. Null hides the menu.
+  const [contextMenuNode, setContextMenuNode] = useState<TreeDataNode | null>(null);
+
+  const onRightClick = useCallback(
+    ({ event, node }: { event: React.MouseEvent; node: TreeDataNode }) => {
+      if (decodeLoadMoreKey(node.key)) {
+        // "Load more..." rows aren't real nodes -- nothing to copy, so stop the
+        // event reaching the wrapping Dropdown's contextMenu trigger rather than
+        // popping open a menu with nothing to act on.
+        event.stopPropagation();
+        setContextMenuNode(null);
+        return;
+      }
+      setSelectedKeys([node.key]);
+      onSelectNode?.({ nodeId: Number(node.key), label: labelOf(node) });
+      setContextMenuNode(node);
+    },
+    [onSelectNode],
+  );
+
+  const onCopyFormattedXml = useCallback(() => {
+    const node = contextMenuNode;
+    if (!node) {
+      return;
+    }
+    void (async () => {
+      try {
+        const xml = await getFormattedOuterXml(docId, Number(node.key));
+        await writeText(xml);
+      } catch (err) {
+        void message.error(t('tree.copy_failed', { error: String(err) }));
+      }
+    })();
+  }, [contextMenuNode, docId, t]);
+
+  const contextMenuItems = useMemo(
+    () => [
+      {
+        key: 'copy-formatted-xml',
+        icon: <CopyOutlined />,
+        label: t('tree.copy_formatted_xml'),
+        onClick: onCopyFormattedXml,
+      },
+    ],
+    [t, onCopyFormattedXml],
+  );
+
   // Walk get_node_path's child-index path from the root, lazily loading (and
   // paging, up to a cap) each level so the target row exists, then expand the
   // ancestors and select + scroll to it.
@@ -245,48 +297,54 @@ export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
     // viewport to fill the available area (instead of collapsing to the expanded
     // nodes' height), so the horizontal scrollbar stays pinned at the bottom.
     <div className="xml-tree-fill" style={{ height, borderWidth: 1, borderStyle: 'solid', borderColor: colorBorder, borderRadius }}>
-      <Tree
-        ref={treeRef}
-        // blockNode stretches each row to the full width (align-items: stretch)
-        // instead of shrinking to its own content, so short rows like a lone
-        // <catalog> root fill the panel rather than sitting in a narrow box.
-        blockNode
-        treeData={treeData}
-        loadData={onLoadData}
-        onSelect={onSelect}
-        expandedKeys={expandedKeys}
-        onExpand={setExpandedKeys}
-        selectedKeys={selectedKeys}
-        height={height}
-        scrollWidth={scrollWidth}
-        // An expandable node's caret is swapped for a spinner while its children load.
-        // antd only calls switcherIcon for non-leaf nodes, so "Load more..." leaf rows
-        // never reach here -- they get a title spinner below instead.
-        switcherIcon={(node) =>
-          node.eventKey != null && loadingKeys.has(node.eventKey) ? (
-            <LoadingOutlined />
-          ) : (
-            <CaretDownFilled />
-          )
-        }
-        titleRender={(node) => {
-          // "Load more..." rows have no switcher to spin, so show progress in their
-          // title: they're loading when the parent they page (encoded in their key)
-          // is the key being fetched.
-          const loadMore = decodeLoadMoreKey(node.key);
-          const isLoading = loadMore != null && loadingKeys.has(loadMore.parentKey);
-          // node.title is always a string in our data, but antd types it as a
-          // ReactNode-or-render-function; resolve it to a node rather than stringify.
-          const title = typeof node.title === 'function' ? node.title(node) : node.title;
-          return (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              {title}
-              {isLoading && <Spin size="small" />}
-            </span>
-          );
-        }}
-        style={{ fontFamily: 'monospace', whiteSpace: 'pre' }}
-      />
+      {/* trigger=['contextMenu'] gives antd's own alignPoint positioning (menu
+          follows the cursor) and auto-close-on-outside-click for free; we only
+          need to track which node the right-click landed on (onRightClick above). */}
+      <Dropdown trigger={['contextMenu']} menu={{ items: contextMenuItems }}>
+        <Tree
+          ref={treeRef}
+          // blockNode stretches each row to the full width (align-items: stretch)
+          // instead of shrinking to its own content, so short rows like a lone
+          // <catalog> root fill the panel rather than sitting in a narrow box.
+          blockNode
+          treeData={treeData}
+          loadData={onLoadData}
+          onSelect={onSelect}
+          onRightClick={onRightClick}
+          expandedKeys={expandedKeys}
+          onExpand={setExpandedKeys}
+          selectedKeys={selectedKeys}
+          height={height}
+          scrollWidth={scrollWidth}
+          // An expandable node's caret is swapped for a spinner while its children load.
+          // antd only calls switcherIcon for non-leaf nodes, so "Load more..." leaf rows
+          // never reach here -- they get a title spinner below instead.
+          switcherIcon={(node) =>
+            node.eventKey != null && loadingKeys.has(node.eventKey) ? (
+              <LoadingOutlined />
+            ) : (
+              <CaretDownFilled />
+            )
+          }
+          titleRender={(node) => {
+            // "Load more..." rows have no switcher to spin, so show progress in their
+            // title: they're loading when the parent they page (encoded in their key)
+            // is the key being fetched.
+            const loadMore = decodeLoadMoreKey(node.key);
+            const isLoading = loadMore != null && loadingKeys.has(loadMore.parentKey);
+            // node.title is always a string in our data, but antd types it as a
+            // ReactNode-or-render-function; resolve it to a node rather than stringify.
+            const title = typeof node.title === 'function' ? node.title(node) : node.title;
+            return (
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                {title}
+                {isLoading && <Spin size="small" />}
+              </span>
+            );
+          }}
+          style={{ fontFamily: 'monospace', whiteSpace: 'pre' }}
+        />
+      </Dropdown>
     </div>
   );
 });

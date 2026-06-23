@@ -1,7 +1,7 @@
 - [x] file drop target
-- [ ] help panel
-  - [ ] language selector radios
-  - [ ] theme selector radios
+- [x] help panel
+  - [x] language selector radios
+  - [x] theme selector radios
 - i18n top languages:
   1. [x] English
   2. [ ] Polish

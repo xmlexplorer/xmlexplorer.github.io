@@ -6,6 +6,10 @@
   "language": "Language",
   "open_file_instruction": "Click the 'Open File' button to select an XML file from your computer.",
   "theme": "Theme",
+  "tree": {
+    "copy_formatted_xml": "Copy Formatted XML",
+    "copy_failed": "Failed to copy: {{error}}"
+  },
   "themes": {
     "auto": "Auto",
     "auto_description": "Automatically change background and content based on your system settings and theme.",
