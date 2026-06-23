@@ -4,10 +4,13 @@
   "description": "XML Explorer is an extremely fast, lightweight XML file viewer. It can handle extremely large XML files, allows fast viewing and exploration, copying of formatted XML data, evaluation of XPath expressions, and XSD schema validation.",
   "type": "module",
   "scripts": {
+    "start": "npm run native",
+    "test": "npm run lint && npm run typecheck && npm run vitest",
     "dev": "vite",
     "build": "vite build",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit",
+    "vitest": "vitest run",
     "lint": "eslint",
     "native": "npx tauri dev --config native/tauri.conf.json",
     "native:build": "npx tauri build --config native/tauri.conf.json"
@@ -25,7 +28,8 @@
     "globals": "^17.6.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.61.0",
-    "vite": "^8.0.16"
+    "vite": "^8.0.16",
+    "vitest": "^4.1.9"
   },
   "dependencies": {
     "@ant-design/icons": "^6.2.5",

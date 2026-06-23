@@ -9,14 +9,11 @@ import { XmlTree } from './components/XmlTree';
 import useThemeMenuItems from './hooks/useThemeMenuItems';
 import { ThemeNameContext, useThemeName, type ThemeNames } from './hooks/useThemeName';
 import { paintFrame } from './lib/paintFrame';
+import { baseName } from './lib/path';
 import { closeDocument, openDocument, type OpenedDocument } from './lib/tauri';
 
 const HEADER_HEIGHT = 'auto';
 const AD_HEIGHT = 90;
-
-function baseName(path: string): string {
-  return path.split(/[\\/]/).pop() ?? path;
-}
 
 export function AppContent() {
   const { t } = useTranslation();
@@ -93,7 +90,7 @@ export function AppContent() {
           <Layout.Header style={{ backgroundColor: colorBgBase, height: 'auto', lineHeight: 'normal', padding: '8px', display: 'flex', alignItems: 'center' }}>
 
             <Space wrap align="center">
-              <span style={{ marginRight: 8, fontFamily: 'inherit' }}>XML Explorer</span>
+              {/* <span style={{ marginRight: 8, fontFamily: 'inherit' }}>XML Explorer</span> */}
 
               <Button onClick={onOpenFile} loading={loading} icon={<FileOutlined />}>
                 Open File...
@@ -109,7 +106,7 @@ export function AppContent() {
           </Layout.Header>
           <Layout.Content
             ref={contentRef}
-            style={{ height: `calc(100% - ${HEADER_HEIGHT}px - ${AD_HEIGHT}px)` }}
+            style={{ height: `calc(100% - ${HEADER_HEIGHT}px - ${AD_HEIGHT}px)`, background: colorBgContainer }}
           >
             {doc && contentHeight > 0 && (
               // key={doc.docId} forces a full remount on each newly opened document --

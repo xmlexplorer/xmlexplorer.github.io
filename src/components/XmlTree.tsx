@@ -1,51 +1,15 @@
+import { CaretDownFilled, LoadingOutlined } from '@ant-design/icons';
 import { Spin, Tree, type TreeDataNode } from 'antd';
 import type { Key } from 'react';
 import { useCallback, useRef, useState } from 'react';
 import { paintFrame } from '../lib/paintFrame';
 import { getChildren, type NodeSummary } from '../lib/tauri';
+import { decodeLoadMoreKey, mergePage, toTreeNode, withChildrenAt } from '../lib/treeData';
 
 interface XmlTreeProps {
   docId: number;
   root: NodeSummary;
   height: number;
-}
-
-// Some real documents have nodes with millions of direct children (a flat list of
-// sibling records). get_children already returns those in bounded pages rather than
-// all at once -- this is the UI-side half of that: a clickable placeholder node that
-// fetches and splices in the next page, instead of ever holding/rendering everything.
-const LOAD_MORE_PREFIX = 'load-more:';
-
-function toTreeNode(node: NodeSummary): TreeDataNode {
-  return {
-    key: String(node.nodeId),
-    title: node.label,
-    isLeaf: !node.hasChildren,
-  };
-}
-
-function loadMoreNode(parentKey: Key, nextOffset: number, remaining: number): TreeDataNode {
-  return {
-    key: `${LOAD_MORE_PREFIX}${String(parentKey)}:${String(nextOffset)}`,
-    title: `Load more... (${remaining.toLocaleString()} remaining)`,
-    isLeaf: true,
-  };
-}
-
-function withChildrenAt(
-  list: TreeDataNode[],
-  key: Key,
-  updater: (children: TreeDataNode[] | undefined) => TreeDataNode[],
-): TreeDataNode[] {
-  return list.map((node) => {
-    if (node.key === key) {
-      return { ...node, children: updater(node.children) };
-    }
-    if (node.children) {
-      return { ...node, children: withChildrenAt(node.children, key, updater) };
-    }
-    return node;
-  });
 }
 
 export function XmlTree({ docId, root, height }: XmlTreeProps) {
@@ -63,6 +27,11 @@ export function XmlTree({ docId, root, height }: XmlTreeProps) {
   const loadingRef = useRef<Set<Key>>(new Set());
 
   const loadPageInto = useCallback(
+    // antd's built-in switcher-arrow loading icon (which would otherwise cover the
+    // loadData/expand case for free) doesn't render visibly in this antd/webview
+    // combination, so we track loading ourselves for every case instead -- this is
+    // also the only indicator at all for "Load more..." rows, which are plain
+    // leaves clicked via onSelect and have no switcher to begin with.
     async (parentKey: Key, offset: number) => {
       if (loadingRef.current.has(parentKey)) {
         return;
@@ -77,16 +46,9 @@ export function XmlTree({ docId, root, height }: XmlTreeProps) {
         const loadedThrough = page.offset + page.items.length;
 
         setTreeData((prev) =>
-          withChildrenAt(prev, parentKey, (existing) => {
-            const withoutPlaceholder = (existing ?? []).filter(
-              (n) => typeof n.key !== 'string' || !n.key.startsWith(LOAD_MORE_PREFIX),
-            );
-            const next = [...withoutPlaceholder, ...pageNodes];
-            if (page.hasMore) {
-              next.push(loadMoreNode(parentKey, loadedThrough, page.total - loadedThrough));
-            }
-            return next;
-          }),
+          withChildrenAt(prev, parentKey, (existing) =>
+            mergePage(existing, parentKey, pageNodes, loadedThrough, page.total, page.hasMore),
+          ),
         );
       } finally {
         loadingRef.current.delete(parentKey);
@@ -114,15 +76,10 @@ export function XmlTree({ docId, root, height }: XmlTreeProps) {
 
   const onSelect = useCallback(
     (_selectedKeys: Key[], info: { node: TreeDataNode }) => {
-      const key = info.node.key;
-      if (typeof key !== 'string' || !key.startsWith(LOAD_MORE_PREFIX)) {
-        return;
+      const loadMore = decodeLoadMoreKey(info.node.key);
+      if (loadMore) {
+        void loadPageInto(loadMore.parentKey, loadMore.offset);
       }
-      const rest = key.slice(LOAD_MORE_PREFIX.length);
-      const lastColon = rest.lastIndexOf(':');
-      const parentKey = rest.slice(0, lastColon);
-      const offset = Number(rest.slice(lastColon + 1));
-      void loadPageInto(parentKey, offset);
     },
     [loadPageInto],
   );
@@ -133,13 +90,32 @@ export function XmlTree({ docId, root, height }: XmlTreeProps) {
       loadData={onLoadData}
       onSelect={onSelect}
       height={height}
-      showLine
-      titleRender={(node) => (
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          {String(node.title)}
-          {loadingKeys.has(node.key) && <Spin size="small" />}
-        </span>
-      )}
+      // An expandable node's caret is swapped for a spinner while its children load.
+      // antd only calls switcherIcon for non-leaf nodes, so "Load more..." leaf rows
+      // never reach here -- they get a title spinner below instead.
+      switcherIcon={(node) =>
+        node.eventKey != null && loadingKeys.has(node.eventKey) ? (
+          <LoadingOutlined />
+        ) : (
+          <CaretDownFilled />
+        )
+      }
+      titleRender={(node) => {
+        // "Load more..." rows have no switcher to spin, so show progress in their
+        // title: they're loading when the parent they page (encoded in their key)
+        // is the key being fetched.
+        const loadMore = decodeLoadMoreKey(node.key);
+        const isLoading = loadMore != null && loadingKeys.has(loadMore.parentKey);
+        // node.title is always a string in our data, but antd types it as a
+        // ReactNode-or-render-function; resolve it to a node rather than stringify.
+        const title = typeof node.title === 'function' ? node.title(node) : node.title;
+        return (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            {title}
+            {isLoading && <Spin size="small" />}
+          </span>
+        );
+      }}
       style={{ fontFamily: 'monospace', whiteSpace: 'pre' }}
     />
   );
