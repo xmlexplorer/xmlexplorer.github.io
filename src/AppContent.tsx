@@ -3,7 +3,6 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { Button, Dropdown, Layout, Space, Typography, message, theme } from 'antd';
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AdBar } from './components/AdBar';
 import { DropOverlay } from './components/DropOverlay';
 import HelpPanel from './components/HelpPanel';
 import LanguageDropdown from './components/LanguageDropdown';
@@ -144,9 +143,9 @@ export function AppContent() {
             <HelpPanel />
           )}
         </Layout.Content>
-        <Layout.Footer style={{ padding: 0, height: AD_HEIGHT }}>
-          <AdBar />
-        </Layout.Footer>
+        {/* Empty spacer: the ad itself is a native child webview (see native/src/lib.rs)
+            positioned by Rust over this exact screen region, not React content. */}
+        <Layout.Footer style={{ padding: 0, height: AD_HEIGHT }} />
       </Layout>
       {doc && (
         // key={doc.docId} resets the panel's query/results when a new file is opened.

@@ -9,19 +9,25 @@
     html, body {
       margin: 0;
       padding: 0;
+      height: 90px;
+      overflow: hidden;
       background: transparent;
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
   </style>
 </head>
 
 <body>
   <script async src="//pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
+  <!-- Fixed 728x90 leaderboard, not "auto"/full-width-responsive: that format picks its
+       own height to fit the ad, but our container (a fixed-height native webview strip,
+       see native/src/lib.rs) can't grow to match it, which produced scrollbars. -->
   <ins class="adsbygoogle"
-       style="display:block"
+       style="display:inline-block;width:728px;height:90px"
        data-ad-client="ca-pub-4263195580051724"
-       data-ad-slot="5709408670"
-       data-ad-format="auto"
-       data-full-width-responsive="true"></ins>
+       data-ad-slot="5709408670"></ins>
   <script>
     (adsbygoogle = window.adsbygoogle || []).push({});
   </script>

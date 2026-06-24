@@ -7,7 +7,7 @@ edition = "2024"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["devtools"] }
+tauri = { version = "2", features = ["devtools", "unstable"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-clipboard-manager = "2"
 libxml = "0.3"
