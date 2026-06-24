@@ -1,0 +1,10 @@
+{
+  "language": "Idioma",
+  "theme": "Tema",
+  "themes": {
+    "auto": "Automático",
+    "auto_description": "Cambia automáticamente el fondo y el contenido según la configuración y el tema de tu sistema.",
+    "dark": "Oscuro",
+    "light": "Claro"
+  }
+}

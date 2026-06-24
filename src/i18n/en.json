@@ -1,0 +1,19 @@
+{
+  "app_description": "XML Explorer is an extremely fast, lightweight XML file viewer. It can handle extremely large XML files. It has been tested on files as big as 300MB. It allows fast viewing and exploration, copying of formatted XML data, evaluation of XPath expressions, and XSD schema validation.",
+  "drag_drop_description": "Drag and drop an XML file from your computer into this page.",
+  "get_started_intro": "Get started by doing one of the following:",
+  "getting_started": "Getting Started",
+  "language": "Language",
+  "open_file_instruction": "Click the 'Open File' button to select an XML file from your computer.",
+  "theme": "Theme",
+  "tree": {
+    "copy_formatted_xml": "Copy Formatted XML",
+    "copy_failed": "Failed to copy: {{error}}"
+  },
+  "themes": {
+    "auto": "Auto",
+    "auto_description": "Automatically change background and content based on your system settings and theme.",
+    "dark": "Dark",
+    "light": "Light"
+  }
+}

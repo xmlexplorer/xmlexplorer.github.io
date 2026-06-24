@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<catalog xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="catalog.xsd">
+  <book id="bk101">
+    <title>XML Developer's Guide</title>
+    <price>44.95</price>
+  </book>
+  <book id="bk102">
+    <title>Midnight Rain</title>
+    <price>5.95</price>
+  </book>
+</catalog>

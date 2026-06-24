@@ -1,0 +1,48 @@
+{
+  "name": "xmlexplorer.github.io",
+  "version": "0.1.0",
+  "description": "XML Explorer is an extremely fast, lightweight XML file viewer. It can handle extremely large XML files, allows fast viewing and exploration, copying of formatted XML data, evaluation of XPath expressions, and XSD schema validation.",
+  "type": "module",
+  "scripts": {
+    "start": "npm run native",
+    "test": "npm run lint && npm run typecheck && npm run vitest && npm run test:rust",
+    "dev": "vite",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "preview": "vite preview",
+    "vitest": "vitest run",
+    "test:rust": "cargo test --manifest-path native/Cargo.toml",
+    "lint": "eslint",
+    "native": "npx tauri dev --config native/tauri.conf.json",
+    "native:build": "npx tauri build --config native/tauri.conf.json"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "@tauri-apps/cli": "^2.11.2",
+    "@types/node": "^26.0.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.2",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "globals": "^17.6.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.61.0",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.9"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^6.2.5",
+    "@tauri-apps/api": "^2.11.0",
+    "@tauri-apps/plugin-clipboard-manager": "^2.3.2",
+    "@tauri-apps/plugin-dialog": "^2.4.0",
+    "antd": "^6.4.4",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-i18next": "^17.0.8"
+  },
+  "engines": {
+    "node": ">=24.16"
+  }
+}

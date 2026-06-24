@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<store xmlns="http://example.com/store" xmlns:inv="http://example.com/inventory">
+  <inv:book id="bk201">
+    <title>Learning Rust</title>
+  </inv:book>
+</store>

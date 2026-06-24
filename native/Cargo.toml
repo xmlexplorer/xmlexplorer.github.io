@@ -1,0 +1,14 @@
+[package]
+name = "xmlexplorer"
+version = "0.1.0"
+edition = "2024"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["devtools"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-clipboard-manager = "2"
+libxml = "0.3"
+serde = { version = "1", features = ["derive"] }
