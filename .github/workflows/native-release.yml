@@ -38,11 +38,7 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             label: mac-arm64
-          # Genuinely Intel hardware, not Apple Silicon cross-compiling to x86_64:
-          # pkg-config can't safely cross-target libxml2 from an arm64 host (it
-          # refuses rather than risk linking the wrong architecture), so this
-          # needs to be a native build.
-          - os: macos-13
+          - os: macos-latest
             target: x86_64-apple-darwin
             label: mac-x64
           - os: ubuntu-latest
@@ -74,7 +70,16 @@ jobs:
       - name: Install libxml2 (Windows)
         if: runner.os == 'Windows'
         shell: bash
-        run: vcpkg install libxml2:x64-windows-static-md
+        run: |
+          vcpkg install libxml2:x64-windows-static-md
+          # The vcpkg crate looks for VCPKG_ROOT specifically; GH runners only
+          # set VCPKG_INSTALLATION_ROOT by default.
+          echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> "$GITHUB_ENV"
+          echo "VCPKGRS_TRIPLET=x64-windows-static-md" >> "$GITHUB_ENV"
+
+      - name: Point libxml2 at the macOS SDK (cross-compiling to x86_64 from arm64)
+        if: matrix.target == 'x86_64-apple-darwin'
+        run: echo "LIBXML2=$(xcrun --sdk macosx --show-sdk-path)/usr/lib/libxml2.tbd" >> "$GITHUB_ENV"
 
       - run: npm ci
 
