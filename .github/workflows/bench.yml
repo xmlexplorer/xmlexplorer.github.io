@@ -9,7 +9,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - os: macos-latest
+          # Genuinely Intel hardware, not Apple Silicon cross-compiling to x86_64:
+          # pkg-config can't safely cross-target libxml2 from an arm64 host (it
+          # refuses rather than risk linking the wrong architecture), so this
+          # needs to be a native build.
+          - os: macos-13
             target: x86_64-apple-darwin
             label: mac-x64-intel
           - os: macos-latest
