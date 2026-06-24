@@ -53,8 +53,18 @@ pub fn run() {
                 let ad_url = tauri::WebviewUrl::External(
                     AD_FRAME_URL.parse().expect("AD_FRAME_URL must be a valid URL"),
                 );
+                // No on_navigation/on_new_window handlers: tried three times (block
+                // everything; a Google-domain allowlist; the allowlist plus the two
+                // specific gaps it missed) and each attempt surfaced a new category of
+                // legitimate non-click traffic -- Google's own SODAR/vignette URLs, then
+                // a third-party rich-media ad CDN (flashtalking.com) serving the actual
+                // creative. Which third-party vendor shows up is decided per-impression
+                // by whichever advertiser wins that ad auction, so there's no fixed list
+                // to maintain. Click-through-to-browser is unsolved; left as default
+                // (in-place) behavior rather than risk more unwanted browser tabs.
+                let ad_builder = tauri::webview::WebviewBuilder::new(AD_LABEL, ad_url);
                 window.add_child(
-                    tauri::webview::WebviewBuilder::new(AD_LABEL, ad_url),
+                    ad_builder,
                     tauri::LogicalPosition::new(0.0, 0.0),
                     tauri::LogicalSize::new(1.0, 1.0),
                 )?;

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>XML Explorer: browser-native parser benchmark</title>
+</head>
+
+<body style="font-family: monospace; white-space: pre-wrap; font-size: 16px; padding: 20px; max-width: 700px;">
+  Looking for fixture.xml in this same folder...
+</body>
+<script>
+  function xpathCount(doc) {
+    const result = doc.evaluate('//item', doc, null, XPathResult.UNORDERED_NODE_SNAPSHOT_TYPE, null);
+    const count = result.snapshotLength;
+    if (count === 0) {
+      throw new Error('expected >0 items but got 0 -- document likely did not finish loading before being queried');
+    }
+    return count;
+  }
+
+  // Method A: fetch() -> text() -> DOMParser.parseFromString()
+  // Goes through an intermediate JS string -- one extra full copy/decode pass
+  // versus letting the browser parse directly off the response/navigation.
+  async function methodFetchText() {
+    const t0 = performance.now();
+    const res = await fetch('fixture.xml');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    const t1 = performance.now();
+
+    const doc = new DOMParser().parseFromString(text, 'application/xml');
+    const t2 = performance.now();
+
+    const count = xpathCount(doc);
+    const t3 = performance.now();
+
+    return {
+      doc,
+      lines: [
+        `fetch+text(): ${(t1 - t0).toFixed(1)} ms`,
+        `DOMParser.parseFromString: ${(t2 - t1).toFixed(1)} ms`,
+        `xpath: ${(t3 - t2).toFixed(1)} ms`,
+        `item count: ${count}`,
+      ],
+    };
+  }
+
+  // Method B: XMLHttpRequest with responseType "document" -- the browser
+  // decodes and parses internally as the response arrives; we never see a
+  // JS string at all.
+  async function methodXhrDocument() {
+    const t0 = performance.now();
+    const doc = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('GET', 'fixture.xml');
+      xhr.responseType = 'document';
+      xhr.overrideMimeType('text/xml');
+      xhr.onload = () => (xhr.responseXML ? resolve(xhr.responseXML) : reject(new Error('no responseXML')));
+      xhr.onerror = () => reject(new Error('XHR failed'));
+      xhr.send();
+    });
+    const t1 = performance.now();
+
+    const count = xpathCount(doc);
+    const t2 = performance.now();
+
+    return {
+      doc,
+      lines: [
+        `XHR (responseType=document, load+parse combined): ${(t1 - t0).toFixed(1)} ms`,
+        `xpath: ${(t2 - t1).toFixed(1)} ms`,
+        `item count: ${count}`,
+      ],
+    };
+  }
+
+  // A third method -- navigating a hidden <iframe> directly to the XML file --
+  // was tried and dropped: it triggers the browser's built-in interactive XML-
+  // viewer UI (extra work beyond a plain DOM build), which measured slower in
+  // Chrome and hung outright in Firefox on this 200MB fixture.
+
+  async function run() {
+    const out = [];
+    const keepAlive = [];
+
+    const methods = [
+      // ['A: fetch().text() + DOMParser.parseFromString()', methodFetchText],
+      ['B: XMLHttpRequest (responseType="document")', methodXhrDocument],
+    ];
+
+    for (const [label, fn] of methods) {
+      document.body.textContent = `Running ${label}...`;
+      try {
+        const result = await fn();
+        keepAlive.push(result.doc);
+        out.push(`=== ${label} ===`, ...result.lines, '');
+      } catch (e) {
+        out.push(`=== ${label} ===`, `FAILED: ${e.message}`, '');
+      }
+    }
+
+    // Keep documents reachable so none get garbage-collected before you can
+    // check real memory usage in your browser/OS task manager.
+    window.keepAliveDocs = keepAlive;
+
+    const mem = performance.memory
+      ? (performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1) + ' MB (JS heap only -- NOT the real total)'
+      : 'n/a (performance.memory is Chrome-only)';
+    out.push(`JS heap used: ${mem}`, '');
+    out.push(
+      'All three documents kept alive on window.keepAliveDocs -- check your',
+      "browser's task manager now (Chrome: Shift+Esc or menu > More Tools >",
+      'Task Manager; Firefox: about:memory; Safari: Activity Monitor, find',
+      '"WebContent").'
+    );
+
+    document.body.textContent = out.join('\n');
+  }
+  run().catch(e => { document.body.textContent = 'ERROR: ' + e.message; });
+</script>
+
+</html>
