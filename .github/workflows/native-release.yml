@@ -1,0 +1,180 @@
+name: Build & Release Native App
+
+on:
+  push:
+    tags: ["native-v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (e.g. native-v0.1.0). Leave blank for a dry-run build with no release."
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: native-release
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: sudo apt-get update && sudo apt-get install -y libxml2-dev libclang-dev
+      - run: npm ci
+      - run: npm test
+
+  build:
+    needs: test
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            label: mac-arm64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            label: mac-x64
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            label: linux-x64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            label: win-x64
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libxml2-dev libclang-dev
+
+      - name: Install libxml2 (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: vcpkg install libxml2:x64-windows-static-md
+
+      - run: npm ci
+
+      - name: Set version from tag
+        if: startsWith(github.ref, 'refs/tags/native-v') || github.event.inputs.tag != ''
+        id: ver
+        shell: bash
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            TAG="${{ github.ref_name }}"
+          else
+            TAG="${{ github.event.inputs.tag }}"
+          fi
+          VERSION="${TAG#native-v}"
+          echo "value=${VERSION}" >> "$GITHUB_OUTPUT"
+          node -e "const fs=require('fs'),c=JSON.parse(fs.readFileSync('native/tauri.conf.json','utf8'));c.version='${VERSION}';fs.writeFileSync('native/tauri.conf.json',JSON.stringify(c,null,2)+'\n')"
+
+      - name: Build Tauri app
+        run: npx tauri build --config native/tauri.conf.json --target ${{ matrix.target }}
+
+      - name: Rename artifacts
+        shell: bash
+        run: |
+          VERSION=$(grep '"version"' native/tauri.conf.json | head -1 | sed 's/.*"version": *"\([^"]*\)".*/\1/')
+          LABEL="${{ matrix.label }}"
+          DEST="release-assets"
+          mkdir -p "$DEST"
+          BUNDLE="native/target/${{ matrix.target }}/release/bundle"
+          for f in "$BUNDLE"/dmg/*.dmg; do
+            [ -f "$f" ] && cp "$f" "$DEST/XmlExplorer-${VERSION}-${LABEL}.dmg"
+          done
+          for f in "$BUNDLE"/macos/*.app.tar.gz; do
+            [ -f "$f" ] && cp "$f" "$DEST/XmlExplorer-${VERSION}-${LABEL}.app.tar.gz"
+          done
+          for f in "$BUNDLE"/appimage/*.AppImage; do
+            [ -f "$f" ] && cp "$f" "$DEST/XmlExplorer-${VERSION}-${LABEL}.AppImage"
+          done
+          for f in "$BUNDLE"/deb/*.deb; do
+            [ -f "$f" ] && cp "$f" "$DEST/XmlExplorer-${VERSION}-${LABEL}.deb"
+          done
+          for f in "$BUNDLE"/rpm/*.rpm; do
+            [ -f "$f" ] && cp "$f" "$DEST/XmlExplorer-${VERSION}-${LABEL}.rpm"
+          done
+          for f in "$BUNDLE"/msi/*.msi; do
+            [ -f "$f" ] && cp "$f" "$DEST/XmlExplorer-${VERSION}-${LABEL}.msi"
+          done
+          for f in "$BUNDLE"/nsis/*setup*.exe; do
+            [ -f "$f" ] && cp "$f" "$DEST/XmlExplorer-${VERSION}-${LABEL}-setup.exe"
+          done
+          ls -la "$DEST/"
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: XmlExplorer-${{ matrix.label }}
+          path: release-assets/*
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/native-v') || github.event.inputs.tag != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          merge-multiple: true
+
+      - name: Determine tag
+        id: tag
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            TAG="${{ github.ref_name }}"
+          else
+            TAG="${{ github.event.inputs.tag }}"
+          fi
+          echo "name=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "version=${TAG#native-}" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          name: XML Explorer Native App ${{ steps.tag.outputs.version }}
+          generate_release_notes: false
+          append_body: true
+          body: |
+            XML Explorer is an extremely fast, lightweight XML file viewer. It can handle extremely large XML files, allows fast viewing and exploration, copying of formatted XML data, and evaluation of XPath expressions.
+
+            ## Installation
+            - **macOS**: Download the `.dmg` file for your processor, open it, and drag XML Explorer to Applications.
+              - aarch64: Apple Silicon
+              - x64: Intel Silicon
+            - **Linux**: Download the package format for your distro.
+              - .AppImage: Universal, runs on any distro (self-contained, no install needed)
+              - .deb: Debian, Ubuntu, Mint, Pop!_OS, etc.
+              - .rpm: Fedora, RHEL, CentOS, openSUSE, etc.
+            - **Windows**: Download and run the `.msi` installer or `setup.exe` (NSIS) installer file.
+
+            These builds are currently unsigned, so macOS/Windows may show an "unidentified developer" warning on first launch.
+
+          files: |
+            **/*.dmg
+            **/*.app.tar.gz
+            **/*.AppImage
+            **/*.deb
+            **/*.rpm
+            **/*.exe
+            **/*.msi
