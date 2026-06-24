@@ -3,3 +3,5 @@
 node_modules
 dist
 native/target
+bench/target
+bench/browser/fixture.xml
