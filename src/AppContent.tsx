@@ -1,5 +1,6 @@
-import { FileOutlined, FunctionOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons';
+import { FileOutlined, FunctionOutlined, GithubOutlined, HeartOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons';
 import { open } from '@tauri-apps/plugin-dialog';
+import { openUrl } from '@tauri-apps/plugin-opener';
 import { Button, Dropdown, Layout, Space, Typography, message, theme } from 'antd';
 import { use, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,7 +17,11 @@ import { baseName } from './lib/path';
 import { closeDocument, openDocument, type OpenedDocument } from './lib/tauri';
 
 const HEADER_HEIGHT = 'auto';
-const AD_HEIGHT = 90;
+const FOOTER_HEIGHT = 40;
+
+const DONATE_URL = 'https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7827155';
+
+const GITHUB_URL = 'https://github.com/xmlexplorer/xmlexplorer.github.io';
 
 export function AppContent() {
   const { t } = useTranslation();
@@ -73,6 +78,14 @@ export function AppContent() {
     })();
   }, [doc]);
 
+  const onDonate = useCallback(() => {
+    void openUrl(DONATE_URL);
+  }, []);
+
+  const onGithub = useCallback(() => {
+    void openUrl(GITHUB_URL);
+  }, []);
+
   const onOpenFile = useCallback(() => {
     void (async () => {
       // No extension filter: lots of formats are really XML (.svg, .rss, .xsl,
@@ -123,7 +136,7 @@ export function AppContent() {
         </Layout.Header>
         <Layout.Content
           ref={contentRef}
-          style={{ height: `calc(100% - ${HEADER_HEIGHT}px - ${AD_HEIGHT}px)`, background: colorBgContainer, padding: 4 }}
+          style={{ height: `calc(100% - ${HEADER_HEIGHT}px - ${FOOTER_HEIGHT}px)`, background: colorBgContainer, padding: 4 }}
         >
           {doc && contentHeight > 0 && (
             // key={doc.docId} forces a full remount on each newly opened document --
@@ -143,9 +156,22 @@ export function AppContent() {
             <HelpPanel />
           )}
         </Layout.Content>
-        {/* Empty spacer: the ad itself is a native child webview (see native/src/lib.rs)
-            positioned by Rust over this exact screen region, not React content. */}
-        <Layout.Footer style={{ padding: 0, height: AD_HEIGHT }} />
+        <Layout.Footer
+          style={{
+            height: FOOTER_HEIGHT,
+            padding: '0 16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+          }}
+        >
+          <Button type="link" size="small" icon={<HeartOutlined />} onClick={onDonate}>
+            {t('donate')}
+          </Button>
+          <Button type="link" size="small" icon={<GithubOutlined />} onClick={onGithub}>
+            Code
+          </Button>
+        </Layout.Footer>
       </Layout>
       {doc && (
         // key={doc.docId} resets the panel's query/results when a new file is opened.
