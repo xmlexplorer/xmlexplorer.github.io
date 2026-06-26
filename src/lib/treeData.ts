@@ -40,10 +40,18 @@ export function decodeLoadMoreKey(key: Key): { parentKey: string; offset: number
   return { parentKey: rest.slice(0, lastColon), offset: Number(rest.slice(lastColon + 1)) };
 }
 
-export function loadMoreNode(parentKey: Key, nextOffset: number, remaining: number): TreeDataNode {
+// `t` is i18next's translate function, passed in (rather than imported) so this
+// module stays free of any dependency on the app's i18n setup and is unit-testable
+// with a plain stub.
+export function loadMoreNode(
+  parentKey: Key,
+  nextOffset: number,
+  remaining: number,
+  t: (key: string, options?: Record<string, unknown>) => string,
+): TreeDataNode {
   return {
     key: encodeLoadMoreKey(parentKey, nextOffset),
-    title: `Load more... (${remaining.toLocaleString()} remaining)`,
+    title: t('tree.load_more', { remaining }),
     isLeaf: true,
   };
 }
@@ -108,13 +116,14 @@ export function mergePage(
   loadedThrough: number,
   total: number,
   hasMore: boolean,
+  t: (key: string, options?: Record<string, unknown>) => string,
 ): TreeDataNode[] {
   const withoutPlaceholder = (existing ?? []).filter(
     (n) => typeof n.key !== 'string' || !n.key.startsWith(LOAD_MORE_PREFIX),
   );
   const next = [...withoutPlaceholder, ...pageNodes];
   if (hasMore) {
-    next.push(loadMoreNode(parentKey, loadedThrough, total - loadedThrough));
+    next.push(loadMoreNode(parentKey, loadedThrough, total - loadedThrough, t));
   }
   return next;
 }

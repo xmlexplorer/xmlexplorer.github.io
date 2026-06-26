@@ -53,9 +53,14 @@ describe('encode/decodeLoadMoreKey', () => {
   });
 });
 
+// Mirrors en.json's tree.load_more, standing in for i18next's `t` so these tests
+// don't depend on the app's i18n setup (which needs browser globals unavailable here).
+const stubT = (key: string, options?: Record<string, unknown>) =>
+  `Load more... (${(options?.remaining as number).toLocaleString()} remaining)`;
+
 describe('loadMoreNode', () => {
   it('builds a leaf placeholder with the remaining count in its title', () => {
-    const node = loadMoreNode('42', 500, 1700);
+    const node = loadMoreNode('42', 500, 1700, stubT);
     expect(node.isLeaf).toBe(true);
     expect(node.key).toBe(encodeLoadMoreKey('42', 500));
     expect(node.title).toBe('Load more... (1,700 remaining)');
@@ -103,7 +108,7 @@ describe('tree-walking helpers (used by reveal)', () => {
       children: [
         { key: '1', title: 'a' },
         { key: '2', title: 'b', children: [{ key: '3', title: 'b1' }] },
-        loadMoreNode('0', 2, 5),
+        loadMoreNode('0', 2, 5, stubT),
       ],
     },
   ];
@@ -138,7 +143,7 @@ describe('mergePage', () => {
   ];
 
   it('appends the first page and adds a Load more placeholder when more remain', () => {
-    const merged = mergePage(undefined, '0', page, 2, 10, true);
+    const merged = mergePage(undefined, '0', page, 2, 10, true, stubT);
     expect(merged.slice(0, 2)).toEqual(page);
     const last = merged[merged.length - 1];
     expect(decodeLoadMoreKey(last.key)).toEqual({ parentKey: '0', offset: 2 });
@@ -146,7 +151,7 @@ describe('mergePage', () => {
   });
 
   it('omits the placeholder on the final page', () => {
-    const merged = mergePage(undefined, '0', page, 2, 2, false);
+    const merged = mergePage(undefined, '0', page, 2, 2, false, stubT);
     expect(merged).toEqual(page);
     expect(merged.some((n) => typeof n.key === 'string' && n.key.startsWith(LOAD_MORE_PREFIX))).toBe(false);
   });
@@ -154,9 +159,9 @@ describe('mergePage', () => {
   it('drops the prior Load more placeholder before appending the next page', () => {
     const existing = [
       { key: '1', title: 'one', isLeaf: true },
-      loadMoreNode('0', 1, 9),
+      loadMoreNode('0', 1, 9, stubT),
     ];
-    const merged = mergePage(existing, '0', [{ key: '2', title: 'two', isLeaf: true }], 2, 10, true);
+    const merged = mergePage(existing, '0', [{ key: '2', title: 'two', isLeaf: true }], 2, 10, true, stubT);
     const placeholders = merged.filter(
       (n) => typeof n.key === 'string' && n.key.startsWith(LOAD_MORE_PREFIX),
     );

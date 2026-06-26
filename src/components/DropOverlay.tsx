@@ -1,10 +1,13 @@
 
+import { useTranslation } from 'react-i18next';
+
 interface DropOverlayProps {
   isDragging: boolean;
   invalidDrop?: string;
 }
 
 export function DropOverlay({ isDragging, invalidDrop }: DropOverlayProps) {
+  const { t } = useTranslation();
   if (!isDragging && !invalidDrop) return null;
 
   return (
@@ -27,7 +30,7 @@ export function DropOverlay({ isDragging, invalidDrop }: DropOverlayProps) {
         fontSize: 24,
         fontWeight: 500,
       }}>
-        {invalidDrop ? invalidDrop : "Drop XML file to open"}
+        {invalidDrop ? invalidDrop : t('drop_overlay.prompt')}
       </div>
     </div>
   );

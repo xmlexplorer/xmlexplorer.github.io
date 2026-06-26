@@ -9,7 +9,7 @@ vi.mock('@tauri-apps/api/core', () => ({
   invoke: (...args: unknown[]) => invoke(...args),
 }));
 
-import { closeDocument, evaluateXPath, getChildren, openDocument } from '../lib/tauri';
+import { closeDocument, evaluateXPath, getChildren, openDocument, validateDocument } from '../lib/tauri';
 
 beforeEach(() => {
   invoke.mockReset();
@@ -123,5 +123,36 @@ describe('evaluateXPath', () => {
       expression: 'count(//x)',
       offset: 0,
     });
+  });
+});
+
+describe('validateDocument', () => {
+  it('invokes validate_document_cmd with the docId and maps node_id to nodeId', async () => {
+    invoke.mockResolvedValue([
+      {
+        severity: 'error',
+        line: 12,
+        col: 5,
+        message: "Element 'foo': This element is not expected.",
+        node_id: 3,
+      },
+    ]);
+
+    const result = await validateDocument(1);
+
+    expect(invoke).toHaveBeenCalledWith('validate_document_cmd', { docId: 1 });
+    expect(result).toEqual([
+      { severity: 'error', line: 12, col: 5, message: "Element 'foo': This element is not expected.", nodeId: 3 },
+    ]);
+  });
+
+  it('maps a null node_id through when the issue has no resolvable line', async () => {
+    invoke.mockResolvedValue([
+      { severity: 'warning', line: null, col: null, message: 'Document does not specify a schema.', node_id: null },
+    ]);
+
+    const result = await validateDocument(1);
+
+    expect(result[0].nodeId).toBeNull();
   });
 });

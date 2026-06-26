@@ -1,10 +1,65 @@
 {
+  "actions": {
+    "code": "Код",
+    "open_file": "Открыть файл",
+    "validate": "Проверить",
+    "xpath": "XPath"
+  },
+  "app_description": "XML Explorer — это очень быстрый и легковесный просмотрщик XML-файлов. Он способен обрабатывать очень большие XML-файлы — протестирован на файлах размером до 300 МБ. Он позволяет быстро просматривать и изучать документы, копировать отформатированные данные XML, вычислять выражения XPath и проверять файлы по схеме XSD.",
+  "donate": "Поддержать",
+  "drag_drop_description": "Перетащите XML-файл с компьютера на эту страницу.",
+  "drop_overlay": {
+    "prompt": "Отпустите XML-файл, чтобы открыть его"
+  },
+  "get_started_intro": "Чтобы начать, выполните одно из следующих действий:",
+  "getting_started": "Начало работы",
   "language": "Язык",
+  "open_file_instruction": "Нажмите кнопку «Открыть файл», чтобы выбрать XML-файл на компьютере.",
   "theme": "Тема",
+  "tree": {
+    "copy_failed": "Не удалось скопировать: {{error}}",
+    "copy_formatted_xml": "Скопировать отформатированный XML",
+    "load_more": "Загрузить ещё... (осталось {{remaining, number}})",
+    "show_in_tree": "Показать в дереве"
+  },
   "themes": {
     "auto": "Авто",
     "auto_description": "Автоматически изменяет фон и содержимое в соответствии с настройками системы.",
     "dark": "Тёмная",
     "light": "Светлая"
+  },
+  "validate": {
+    "error_count_few": "{{count, number}} ошибки",
+    "error_count_many": "{{count, number}} ошибок",
+    "error_count_one": "{{count, number}} ошибка",
+    "error_count_other": "{{count, number}} ошибки",
+    "failed_title": "Ошибка проверки",
+    "line_col": "Строка {{line}}, столбец {{col}}",
+    "line_only": "Строка {{line}}",
+    "revalidate": "Повторить проверку",
+    "severity": {
+      "error": "ошибка",
+      "warning": "предупреждение"
+    },
+    "title": "Проверка по схеме",
+    "valid_title": "Документ действителен",
+    "warning_count_few": "{{count, number}} предупреждения",
+    "warning_count_many": "{{count, number}} предупреждений",
+    "warning_count_one": "{{count, number}} предупреждение",
+    "warning_count_other": "{{count, number}} предупреждения"
+  },
+  "xpath": {
+    "context_hint": "— выберите узел в дереве, чтобы изменить его.",
+    "context_label": "Контекст:",
+    "evaluate": "Вычислить",
+    "example_placeholder": "XPath, например //book[@id='bk101']",
+    "invalid_expression": "Недопустимое выражение",
+    "load_more": "Загрузить ещё (осталось {{count, number}})",
+    "match_count_few": "{{count, number}} совпадения",
+    "match_count_many": "{{count, number}} совпадений",
+    "match_count_one": "{{count, number}} совпадение",
+    "match_count_other": "{{count, number}} совпадения",
+    "no_matches": "Нет совпадений",
+    "title": "Вычислить XPath"
   }
 }

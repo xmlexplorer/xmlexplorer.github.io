@@ -1,10 +1,59 @@
 {
+  "actions": {
+    "code": "Código",
+    "open_file": "Abrir archivo",
+    "validate": "Validar",
+    "xpath": "XPath"
+  },
+  "app_description": "XML Explorer es un visor de archivos XML extremadamente rápido y liviano. Puede manejar archivos XML extremadamente grandes. Se ha probado con archivos de hasta 300 MB. Permite la visualización y exploración rápidas, la copia de datos XML formateados, la evaluación de expresiones XPath y la validación de esquemas XSD.",
+  "donate": "Donar",
+  "drag_drop_description": "Arrastra y suelta un archivo XML de tu computadora en esta página.",
+  "drop_overlay": {
+    "prompt": "Suelta el archivo XML para abrirlo"
+  },
+  "get_started_intro": "Para empezar, realiza una de las siguientes acciones:",
+  "getting_started": "Primeros pasos",
   "language": "Idioma",
+  "open_file_instruction": "Haz clic en el botón \"Abrir archivo\" para seleccionar un archivo XML de tu computadora.",
   "theme": "Tema",
+  "tree": {
+    "copy_failed": "No se pudo copiar: {{error}}",
+    "copy_formatted_xml": "Copiar XML formateado",
+    "load_more": "Cargar más... ({{remaining, number}} restantes)",
+    "show_in_tree": "Mostrar en el árbol"
+  },
   "themes": {
     "auto": "Automático",
     "auto_description": "Cambia automáticamente el fondo y el contenido según la configuración y el tema de tu sistema.",
     "dark": "Oscuro",
     "light": "Claro"
+  },
+  "validate": {
+    "error_count_one": "{{count, number}} error",
+    "error_count_other": "{{count, number}} errores",
+    "failed_title": "Error de validación",
+    "line_col": "Línea {{line}}, columna {{col}}",
+    "line_only": "Línea {{line}}",
+    "revalidate": "Revalidar",
+    "severity": {
+      "error": "error",
+      "warning": "advertencia"
+    },
+    "title": "Validar contra el esquema",
+    "valid_title": "El documento es válido",
+    "warning_count_one": "{{count, number}} advertencia",
+    "warning_count_other": "{{count, number}} advertencias"
+  },
+  "xpath": {
+    "context_hint": "— selecciona un nodo en el árbol para cambiarlo.",
+    "context_label": "Contexto:",
+    "evaluate": "Evaluar",
+    "example_placeholder": "XPath, p. ej. //book[@id='bk101']",
+    "invalid_expression": "Expresión no válida",
+    "load_more": "Cargar más ({{count, number}} restantes)",
+    "match_count_one": "{{count, number}} coincidencia",
+    "match_count_other": "{{count, number}} coincidencias",
+    "no_matches": "Sin coincidencias",
+    "title": "Evaluar XPath"
   }
 }

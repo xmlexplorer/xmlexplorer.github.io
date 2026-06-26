@@ -1,10 +1,56 @@
 {
+  "actions": {
+    "code": "代码",
+    "open_file": "打开文件",
+    "validate": "验证",
+    "xpath": "XPath"
+  },
+  "app_description": "XML Explorer 是一款极快、轻量级的 XML 文件查看器。它可以处理超大的 XML 文件，已在高达 300MB 的文件上测试通过。它支持快速查看与浏览、复制格式化的 XML 数据、计算 XPath 表达式以及 XSD 模式验证。",
+  "donate": "捐赠",
+  "drag_drop_description": "将计算机中的 XML 文件拖放到此页面。",
+  "drop_overlay": {
+    "prompt": "松开以打开 XML 文件"
+  },
+  "get_started_intro": "请执行以下操作之一以开始使用：",
+  "getting_started": "快速入门",
   "language": "语言",
+  "open_file_instruction": "点击“打开文件”按钮以从计算机中选择一个 XML 文件。",
   "theme": "主题",
+  "tree": {
+    "copy_failed": "复制失败：{{error}}",
+    "copy_formatted_xml": "复制格式化的 XML",
+    "load_more": "加载更多...（剩余 {{remaining, number}} 个）",
+    "show_in_tree": "在树中显示"
+  },
   "themes": {
     "auto": "自动",
     "auto_description": "根据您的系统设置和主题自动更改背景和内容。",
     "dark": "深色",
     "light": "浅色"
+  },
+  "validate": {
+    "error_count_other": "{{count, number}} 个错误",
+    "failed_title": "验证失败",
+    "line_col": "第 {{line}} 行，第 {{col}} 列",
+    "line_only": "第 {{line}} 行",
+    "revalidate": "重新验证",
+    "severity": {
+      "error": "错误",
+      "warning": "警告"
+    },
+    "title": "对照架构验证",
+    "valid_title": "文档有效",
+    "warning_count_other": "{{count, number}} 个警告"
+  },
+  "xpath": {
+    "context_hint": "—在树中选择一个节点以更改它。",
+    "context_label": "上下文：",
+    "evaluate": "计算",
+    "example_placeholder": "XPath，例如 //book[@id='bk101']",
+    "invalid_expression": "表达式无效",
+    "load_more": "加载更多（剩余 {{count, number}} 个）",
+    "match_count_other": "{{count, number}} 个匹配项",
+    "no_matches": "没有匹配项",
+    "title": "计算 XPath"
   }
 }

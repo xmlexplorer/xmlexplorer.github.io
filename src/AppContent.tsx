@@ -1,4 +1,4 @@
-import { FileOutlined, FunctionOutlined, GithubOutlined, HeartOutlined, MoonOutlined, SunOutlined } from '@ant-design/icons';
+import { FileOutlined, FunctionOutlined, GithubOutlined, HeartOutlined, MoonOutlined, SafetyCertificateOutlined, SunOutlined } from '@ant-design/icons';
 import { open } from '@tauri-apps/plugin-dialog';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { Button, Dropdown, Layout, Space, Typography, message, theme } from 'antd';
@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { DropOverlay } from './components/DropOverlay';
 import HelpPanel from './components/HelpPanel';
 import LanguageDropdown from './components/LanguageDropdown';
+import { ValidatePanel } from './components/ValidatePanel';
 import { XPathPanel } from './components/XPathPanel';
 import { XmlTree, type XmlTreeHandle } from './components/XmlTree';
 import { useFileDrop } from './hooks/useFileDrop';
@@ -29,6 +30,7 @@ export function AppContent() {
   const [fileName, setFileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [xpathOpen, setXpathOpen] = useState(false);
+  const [validateOpen, setValidateOpen] = useState(false);
   const [selectedNode, setSelectedNode] = useState<{ nodeId: number; label: string } | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const treeRef = useRef<XmlTreeHandle>(null);
@@ -112,18 +114,32 @@ export function AppContent() {
             {/* <span style={{ marginRight: 8, fontFamily: 'inherit' }}>XML Explorer</span> */}
 
             <Button onClick={onOpenFile} loading={loading} icon={<FileOutlined />}>
-              Open File...
+              {t('actions.open_file')}
             </Button>
             {fileName && <Typography.Text style={{ color: 'white' }}>{fileName}</Typography.Text>}
 
             {doc && (
               <>
                 <Button
-                  onClick={() => setXpathOpen(true)}
+                  onClick={() => {
+                    setValidateOpen(false);
+                    setXpathOpen(true);
+                  }}
                   disabled={!doc}
                   icon={<FunctionOutlined />}
                 >
-                  XPath...
+                  {t('actions.xpath')}
+                </Button>
+
+                <Button
+                  onClick={() => {
+                    setXpathOpen(false);
+                    setValidateOpen(true);
+                  }}
+                  disabled={!doc}
+                  icon={<SafetyCertificateOutlined />}
+                >
+                  {t('actions.validate')}
                 </Button>
 
                 <Dropdown menu={{ items: themeMenuItems, selectedKeys: [themeName] }}>
@@ -169,7 +185,7 @@ export function AppContent() {
             {t('donate')}
           </Button>
           <Button type="link" size="small" icon={<GithubOutlined />} onClick={onGithub}>
-            Code
+            {t('actions.code')}
           </Button>
         </Layout.Footer>
       </Layout>
@@ -183,6 +199,16 @@ export function AppContent() {
           onLocate={(nodeId) => treeRef.current?.reveal(nodeId)}
           open={xpathOpen}
           onClose={() => setXpathOpen(false)}
+        />
+      )}
+      {doc && (
+        // key={doc.docId} resets the panel's results when a new file is opened.
+        <ValidatePanel
+          key={doc.docId}
+          docId={doc.docId}
+          onLocate={(nodeId) => treeRef.current?.reveal(nodeId)}
+          open={validateOpen}
+          onClose={() => setValidateOpen(false)}
         />
       )}
     </div>

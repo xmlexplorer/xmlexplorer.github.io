@@ -223,6 +223,9 @@ fn validate_reports_errors_for_schema_violations() {
     let issues = validate_document(&store, opened.doc_id).expect("validate_document");
     assert!(!issues.is_empty());
     assert!(issues.iter().all(|i| i.severity == "error"));
+    // Each error's line (within catalog-invalid.xml) should resolve to a node
+    // id the frontend can reveal in the tree.
+    assert!(issues.iter().all(|i| i.node_id.is_some()), "expected node_id for every issue, got {issues:?}");
 }
 
 #[test]

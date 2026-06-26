@@ -26,11 +26,11 @@ export default function LanguageDropdown() {
   return (
     <Dropdown menu={{
       items: [
-        {
-          key: 'language',
-          label: t('language'),
-          type: 'group'
-        },
+        // {
+        //   key: 'language',
+        //   label: t('language'),
+        //   type: 'group'
+        // },
         ...items
       ], selectedKeys: [i18n.resolvedLanguage ?? i18n.language]
     }}>

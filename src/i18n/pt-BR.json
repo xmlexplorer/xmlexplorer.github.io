@@ -1,10 +1,59 @@
 {
+  "actions": {
+    "code": "Código",
+    "open_file": "Abrir arquivo",
+    "validate": "Validar",
+    "xpath": "XPath"
+  },
+  "app_description": "O XML Explorer é um visualizador de arquivos XML extremamente rápido e leve. Ele pode lidar com arquivos XML extremamente grandes e já foi testado com arquivos de até 300 MB. Ele permite visualização e exploração rápidas, cópia de dados XML formatados, avaliação de expressões XPath e validação de esquema XSD.",
+  "donate": "Doar",
+  "drag_drop_description": "Arraste e solte um arquivo XML do seu computador nesta página.",
+  "drop_overlay": {
+    "prompt": "Solte o arquivo XML para abri-lo"
+  },
+  "get_started_intro": "Para começar, faça uma das opções a seguir:",
+  "getting_started": "Primeiros passos",
   "language": "Idioma",
+  "open_file_instruction": "Clique no botão \"Abrir arquivo\" para selecionar um arquivo XML do seu computador.",
   "theme": "Tema",
+  "tree": {
+    "copy_failed": "Falha ao copiar: {{error}}",
+    "copy_formatted_xml": "Copiar XML formatado",
+    "load_more": "Carregar mais... ({{remaining, number}} restantes)",
+    "show_in_tree": "Mostrar na árvore"
+  },
   "themes": {
     "auto": "Automático",
     "auto_description": "Muda automaticamente o fundo e o conteúdo com base nas configurações e no tema do sistema.",
     "dark": "Escuro",
     "light": "Claro"
+  },
+  "validate": {
+    "error_count_one": "{{count, number}} erro",
+    "error_count_other": "{{count, number}} erros",
+    "failed_title": "Falha na validação",
+    "line_col": "Linha {{line}}, Col {{col}}",
+    "line_only": "Linha {{line}}",
+    "revalidate": "Revalidar",
+    "severity": {
+      "error": "erro",
+      "warning": "aviso"
+    },
+    "title": "Validar contra o esquema",
+    "valid_title": "O documento é válido",
+    "warning_count_one": "{{count, number}} aviso",
+    "warning_count_other": "{{count, number}} avisos"
+  },
+  "xpath": {
+    "context_hint": "— selecione um nó na árvore para alterá-lo.",
+    "context_label": "Contexto:",
+    "evaluate": "Avaliar",
+    "example_placeholder": "XPath, ex.: //book[@id='bk101']",
+    "invalid_expression": "Expressão inválida",
+    "load_more": "Carregar mais ({{count, number}} restantes)",
+    "match_count_one": "{{count, number}} correspondência",
+    "match_count_other": "{{count, number}} correspondências",
+    "no_matches": "Nenhuma correspondência",
+    "title": "Avaliar XPath"
   }
 }

@@ -27,6 +27,10 @@ export interface ValidationIssue {
   line: number | null;
   col: number | null;
   message: string;
+  // The node closest to (at or before) `line` in the document, for revealing
+  // the issue in the tree; null when the issue has no line (e.g. "no schema
+  // declared") or the line belongs to the schema file rather than this document.
+  nodeId: number | null;
 }
 
 export interface NodeSummaryPage {
@@ -62,6 +66,14 @@ interface RawNodeSummaryPage {
   offset: number;
   total: number;
   has_more: boolean;
+}
+
+interface RawValidationIssue {
+  severity: 'error' | 'warning';
+  line: number | null;
+  col: number | null;
+  message: string;
+  node_id: number | null;
 }
 
 type RawXPathResult =
@@ -120,7 +132,14 @@ export async function evaluateXPath(
 }
 
 export async function validateDocument(docId: number): Promise<ValidationIssue[]> {
-  return invoke<ValidationIssue[]>('validate_document_cmd', { docId });
+  const raw = await invoke<RawValidationIssue[]>('validate_document_cmd', { docId });
+  return raw.map((issue) => ({
+    severity: issue.severity,
+    line: issue.line,
+    col: issue.col,
+    message: issue.message,
+    nodeId: issue.node_id,
+  }));
 }
 
 export async function getFormattedOuterXml(docId: number, nodeId: number): Promise<string> {

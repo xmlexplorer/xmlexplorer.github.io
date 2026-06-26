@@ -22,11 +22,11 @@ export default function useThemeMenuItems(): MenuItem[] {
   const autoTitle = t('themes.auto_description');
 
   return [
-    {
-      key: 'theme',
-      label: t('theme'),
-      type: 'group',
-    },
+    // {
+    //   key: 'theme',
+    //   label: t('theme'),
+    //   type: 'group',
+    // },
     ...themeNames.map((key) => ({
       key,
       label: key === 'auto' ? <Tooltip title={autoTitle} placement="bottom">{t('themes.auto')}</Tooltip> : t(`themes.${key}`),

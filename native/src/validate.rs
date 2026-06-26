@@ -1,5 +1,7 @@
+use libxml::bindings::xmlGetLineNo;
 use libxml::error::{StructuredError, XmlErrorLevel};
 use libxml::schemas::{SchemaParserContext, SchemaValidationContext};
+use libxml::tree::{Node, NodeType};
 use libxml::xpath::Context;
 use serde::Serialize;
 use std::path::Path;
@@ -12,6 +14,11 @@ pub struct ValidationIssue {
     pub line: Option<i32>,
     pub col: Option<i32>,
     pub message: String,
+    // The arena id of the element closest to (at or before) `line` in the
+    // validated document, so the frontend can reveal/select it in the tree.
+    // Only populated for issues raised against the instance document itself
+    // (not e.g. schema-file parse errors, whose lines refer to the schema).
+    pub node_id: Option<u64>,
 }
 
 const XSI_NS: &str = "http://www.w3.org/2001/XMLSchema-instance";
@@ -74,7 +81,51 @@ fn structured_error_to_issue(error: StructuredError) -> ValidationIssue {
         message: error
             .message
             .unwrap_or_else(|| "unknown validation error".to_string()),
+        node_id: None,
     }
+}
+
+/// Walks the document in document order collecting each element's line
+/// number. Pre-order traversal means lines come out non-decreasing, which
+/// `find_node_for_line` relies on to binary-search rather than scan.
+/// Mirrors xpath::discover_namespaces' iterative (non-recursive) walk via
+/// get_first_child/get_next_sibling, which avoids get_child_nodes()'s
+/// per-node Vec allocation on large documents.
+fn collect_element_lines(open_doc: &OpenDocument) -> Result<Vec<(i32, Node)>, String> {
+    let root = open_doc.get_node(0)?.clone();
+    let mut lines = Vec::new();
+    let mut stack = vec![root];
+    while let Some(node) = stack.pop() {
+        if node.get_type() == Some(NodeType::ElementNode) {
+            let line = unsafe { xmlGetLineNo(node.node_ptr()) } as i32;
+            if line > 0 {
+                lines.push((line, node.clone()));
+            }
+        }
+        let mut children = Vec::new();
+        let mut child = node.get_first_child();
+        while let Some(c) = child {
+            let next = c.get_next_sibling();
+            children.push(c);
+            child = next;
+        }
+        stack.extend(children.into_iter().rev());
+    }
+    Ok(lines)
+}
+
+/// Finds the element starting closest at-or-before `target_line` -- the
+/// deepest such element, since pre-order traversal records a parent before
+/// its same-line children, and binary search lands on the last match.
+fn find_node_for_line(lines: &[(i32, Node)], target_line: i32) -> Option<Node> {
+    if target_line <= 0 {
+        return None;
+    }
+    let idx = lines.partition_point(|(line, _)| *line <= target_line);
+    if idx == 0 {
+        return None;
+    }
+    Some(lines[idx - 1].1.clone())
 }
 
 pub fn validate_document(store: &DocumentStore, doc_id: u64) -> Result<Vec<ValidationIssue>, String> {
@@ -89,6 +140,7 @@ pub fn validate_document(store: &DocumentStore, doc_id: u64) -> Result<Vec<Valid
                 message: "Document does not specify a schema (xsi:schemaLocation or \
                           xsi:noNamespaceSchemaLocation) to validate against."
                     .to_string(),
+                node_id: None,
             }]);
         };
 
@@ -98,6 +150,7 @@ pub fn validate_document(store: &DocumentStore, doc_id: u64) -> Result<Vec<Valid
                 line: None,
                 col: None,
                 message: format!("Cannot find the schema document at '{schema_path}'"),
+                node_id: None,
             }]);
         }
 
@@ -111,7 +164,22 @@ pub fn validate_document(store: &DocumentStore, doc_id: u64) -> Result<Vec<Valid
 
         match schema.validate_document(&open_doc.doc) {
             Ok(()) => Ok(Vec::new()),
-            Err(errors) => Ok(errors.into_iter().map(structured_error_to_issue).collect()),
+            Err(errors) => {
+                let mut issues: Vec<ValidationIssue> =
+                    errors.into_iter().map(structured_error_to_issue).collect();
+                // These lines refer to the instance document just validated (unlike
+                // the schema-parser-error branches above), so it's safe to map them
+                // back to a node here.
+                let lines = collect_element_lines(open_doc)?;
+                for issue in &mut issues {
+                    if let Some(line) = issue.line {
+                        if let Some(node) = find_node_for_line(&lines, line) {
+                            issue.node_id = Some(open_doc.push_node(node));
+                        }
+                    }
+                }
+                Ok(issues)
+            }
         }
     })
 }

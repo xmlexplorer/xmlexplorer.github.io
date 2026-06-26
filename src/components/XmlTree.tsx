@@ -187,7 +187,7 @@ export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
 
         applyTreeUpdate((prev) =>
           withChildrenAt(prev, parentKey, (existing) =>
-            mergePage(existing, parentKey, pageNodes, loadedThrough, page.total, page.hasMore),
+            mergePage(existing, parentKey, pageNodes, loadedThrough, page.total, page.hasMore, t),
           ),
         );
       } finally {
@@ -199,7 +199,7 @@ export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
         });
       }
     },
-    [docId, applyTreeUpdate],
+    [docId, applyTreeUpdate, t],
   );
 
   // Mirrors XPathNavigatorTreeView's on-expand lazy loading: a node's first page of

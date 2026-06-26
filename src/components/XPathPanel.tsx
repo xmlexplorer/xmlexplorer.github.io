@@ -1,5 +1,6 @@
 import { Alert, Button, Drawer, Input, List, Space, Tag, Typography } from 'antd';
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { evaluateXPath, type NodeSummary } from '../lib/tauri';
 
 interface XPathPanelProps {
@@ -29,6 +30,7 @@ export function XPathPanel({
   open,
   onClose,
 }: XPathPanelProps) {
+  const { t } = useTranslation();
   const [expression, setExpression] = useState('');
   // The expression the current results belong to -- paging "Load more" must use
   // this, not whatever's since been typed into the input.
@@ -97,31 +99,30 @@ export function XPathPanel({
       open={open}
       placement="right"
       styles={{ wrapper: { width: 440 } }}
-      title="Evaluate XPath"
+      title={t('xpath.title')}
     >
       <Space.Compact style={{ width: '100%' }}>
         <Input
           value={expression}
           onChange={(e) => setExpression(e.target.value)}
           onPressEnter={() => void evaluate()}
-          placeholder="XPath, e.g. //book[@id='bk101']"
+          placeholder={t('xpath.example_placeholder')}
           allowClear
           autoFocus
           style={{ fontFamily: 'monospace' }}
         />
         <Button type="primary" loading={pending} onClick={() => void evaluate()}>
-          Evaluate
+          {t('xpath.evaluate')}
         </Button>
       </Space.Compact>
 
       <Typography.Text type="secondary" style={{ display: 'block', marginTop: 8, fontSize: 12 }}>
-        Context:{' '}
-        <span style={{ fontFamily: 'monospace' }}>{contextLabel}</span> — select a node in the tree to
-        change it.
+        {t('xpath.context_label')}{' '}
+        <span style={{ fontFamily: 'monospace' }}>{contextLabel}</span> {t('xpath.context_hint')}
       </Typography.Text>
 
       {error && (
-        <Alert style={{ marginTop: 12 }} type="error" showIcon title="Invalid expression" description={error} />
+        <Alert style={{ marginTop: 12 }} type="error" showIcon title={t('xpath.invalid_expression')} description={error} />
       )}
 
       {view.kind === 'scalar' && (
@@ -138,7 +139,7 @@ export function XPathPanel({
       {view.kind === 'nodeset' && (
         <div style={{ marginTop: 16 }}>
           <Typography.Text type="secondary">
-            {view.total.toLocaleString()} {view.total === 1 ? 'match' : 'matches'}
+            {t('xpath.match_count', { count: view.total })}
           </Typography.Text>
           <List
             size="small"
@@ -147,7 +148,7 @@ export function XPathPanel({
               <List.Item
                 onClick={() => onLocate(item.nodeId)}
                 style={{ cursor: 'pointer' }}
-                title="Show in tree"
+                title={t('tree.show_in_tree')}
               >
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <Typography.Text style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
@@ -164,11 +165,11 @@ export function XPathPanel({
                 </div>
               </List.Item>
             )}
-            locale={{ emptyText: 'No matches' }}
+            locale={{ emptyText: t('xpath.no_matches') }}
           />
           {view.hasMore && (
             <Button block loading={pending} onClick={() => void loadMore()}>
-              Load more ({(view.total - view.loadedThrough).toLocaleString()} remaining)
+              {t('xpath.load_more', { count: view.total - view.loadedThrough })}
             </Button>
           )}
         </div>
