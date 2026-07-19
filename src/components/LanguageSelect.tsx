@@ -21,7 +21,7 @@ export default function LanguageSelect() {
           value: key,
           label
         }))}
-        defaultValue="en"
+        value={i18n.resolvedLanguage ?? i18n.language}
         optionType="button"
         buttonStyle="solid"
       />

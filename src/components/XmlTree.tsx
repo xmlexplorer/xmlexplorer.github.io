@@ -355,6 +355,9 @@ export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
           // instead of shrinking to its own content, so short rows like a lone
           // <catalog> root fill the panel rather than sitting in a narrow box.
           blockNode
+          // Clicking a row anywhere (not just the caret) toggles its expansion,
+          // as well as selecting it.
+          expandAction="click"
           treeData={treeData}
           loadData={onLoadData}
           onSelect={onSelect}
