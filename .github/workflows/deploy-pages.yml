@@ -1,0 +1,62 @@
+name: Deploy web app to GitHub Pages
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch: {}
+
+# Least privilege for the OIDC-based Pages deploy: read the repo, write Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; a newer push supersedes an in-flight run.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci
+
+      # Gate the deploy on the web-relevant checks only. The full `npm test` also
+      # runs `test:rust` (cargo test over the native crate), which would pull in
+      # the Rust toolchain + libxml2 system deps and slow deploys down for code
+      # the web build doesn't ship -- so those are intentionally left out here.
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run vitest
+
+      # Vite build -> dist/index.html (the web app) + hashed assets.
+      - run: npm run build
+
+      # dist/ is only the built app; fold in the static marketing/about page and
+      # the download/asset files it references so they ship to the same site root.
+      - name: Add static pages and assets
+        run: |
+          cp about.html favicon.ico ads.txt dist/
+          cp -r resources dist/resources
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

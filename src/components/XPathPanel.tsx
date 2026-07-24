@@ -1,7 +1,7 @@
 import { Alert, Button, Drawer, Input, List, Space, Tag, Typography } from 'antd';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { evaluateXPath, type NodeSummary } from '../lib/tauri';
+import { evaluateXPath, type NodeSummary } from '../lib/engine';
 
 interface XPathPanelProps {
   docId: number;

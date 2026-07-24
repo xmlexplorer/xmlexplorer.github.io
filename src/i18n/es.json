@@ -5,6 +5,7 @@
     "validate": "Validar",
     "xpath": "XPath"
   },
+  "about": "Acerca de",
   "app_description": "XML Explorer es un visor de archivos XML extremadamente rápido y liviano. Puede manejar archivos XML extremadamente grandes. Se ha probado con archivos de hasta 300 MB. Permite la visualización y exploración rápidas, la copia de datos XML formateados, la evaluación de expresiones XPath y la validación de esquemas XSD.",
   "donate": "Donar",
   "drag_drop_description": "Arrastra y suelta un archivo XML de tu computadora en esta página.",
@@ -22,6 +23,13 @@
     "load_more": "Cargar más... ({{remaining, number}} restantes)",
     "show_in_tree": "Mostrar en el árbol"
   },
+  "update": {
+    "available": "Actualización disponible",
+    "web_description": "Hay una versión más reciente de XML Explorer disponible. Recarga para actualizar.",
+    "native_description": "Hay una versión más reciente de la aplicación XML Explorer disponible.",
+    "about_link": "Obtener la última versión",
+    "reload": "Recargar"
+  },
   "themes": {
     "auto": "Automático",
     "auto_description": "Cambia automáticamente el fondo y el contenido según la configuración y el tema de tu sistema.",
@@ -29,6 +37,8 @@
     "light": "Claro"
   },
   "validate": {
+    "web_note": "La validación de esquemas XSD solo está disponible en la aplicación de escritorio.",
+    "web_note_link": "Obtener la aplicación de escritorio",
     "error_count_one": "{{count, number}} error",
     "error_count_other": "{{count, number}} errores",
     "failed_title": "Error de validación",

@@ -1,6 +1,6 @@
 {
   "name": "xmlexplorer.github.io",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "XML Explorer is an extremely fast, lightweight XML file viewer. It can handle extremely large XML files, allows fast viewing and exploration, copying of formatted XML data, evaluation of XPath expressions, and XSD schema validation.",
   "type": "module",
   "scripts": {
@@ -13,6 +13,7 @@
     "vitest": "vitest run",
     "test:rust": "cargo test --manifest-path native/Cargo.toml",
     "lint": "eslint",
+    "set-version": "node scripts/set-version.mjs",
     "native": "npx tauri dev --config native/tauri.conf.json",
     "native:build": "npx tauri build --config native/tauri.conf.json"
   },

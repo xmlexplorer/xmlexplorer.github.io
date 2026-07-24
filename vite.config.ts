@@ -1,16 +1,60 @@
+import { execSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
+import { version } from './package.json';
 
-// `index.html` at the project root is the existing, live marketing/download
-// page for the old Windows app -- left untouched. The new React app's entry
-// point is `app.html`, a separate page, so local development never disturbs
-// the deployed site. `native/tauri.conf.json` points at this same file.
+function getGitHash() {
+  try {
+    return execSync('git rev-parse --short HEAD').toString().trim();
+  } catch {
+    return 'unknown';
+  }
+}
+
+function getNativeVersion() {
+  try {
+    return (JSON.parse(readFileSync('./native/tauri.conf.json', 'utf8')) as { version: string }).version;
+  } catch {
+    return version;
+  }
+}
+
+// Emits a version.json at the site root at build time so the running app can
+// detect when a newer build has been deployed (web) or a newer native version
+// released (native). See src/hooks/useUpdateCheck.ts.
+function emitVersionJson(): Plugin {
+  return {
+    name: 'emit-version-json',
+    generateBundle() {
+      this.emitFile({
+        type: 'asset',
+        fileName: 'version.json',
+        source: JSON.stringify({
+          version,
+          commit: getGitHash(),
+          nativeVersion: getNativeVersion(),
+        }),
+      });
+    },
+  };
+}
+
+// `index.html` at the project root is the React web app's entry point -- the
+// site's default page -- and is what `native/tauri.conf.json` loads too. The old
+// Windows marketing/download page now lives at `about.html` (a plain static page,
+// not a Vite entry); the Pages deploy copies it into `dist/` alongside this build.
 export default defineConfig({
-  plugins: [react()],
+  define: {
+    __APP_VERSION__: JSON.stringify(version),
+    __GIT_HASH__: JSON.stringify(getGitHash()),
+    __BASE_URL__: JSON.stringify('/'),
+  },
+  plugins: [react(), emitVersionJson()],
   build: {
     outDir: 'dist',
     rollupOptions: {
-      input: 'app.html',
+      input: 'index.html',
     },
   },
 });

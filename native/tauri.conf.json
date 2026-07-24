@@ -1,11 +1,11 @@
 {
   "$schema": "https://raw.githubusercontent.com/nicedoc/schemas/refs/heads/master/tauri/2/tauri.conf.json",
   "productName": "XML Explorer",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "identifier": "io.github.xmlexplorer.native",
   "build": {
     "frontendDist": "../dist",
-    "devUrl": "http://localhost:5173/app.html",
+    "devUrl": "http://localhost:5173/",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build"
   },
@@ -17,7 +17,7 @@
         "height": 800,
         "minWidth": 800,
         "minHeight": 600,
-        "url": "app.html"
+        "url": "index.html"
       }
     ],
     "security": {

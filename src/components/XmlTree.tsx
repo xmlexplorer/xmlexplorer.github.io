@@ -1,12 +1,12 @@
 import { CaretDownFilled, CopyOutlined, LoadingOutlined } from '@ant-design/icons';
 import { writeText } from '@tauri-apps/plugin-clipboard-manager';
-import { Dropdown, Spin, message, theme, Tree, type TreeDataNode } from 'antd';
+import { App, Dropdown, Spin, theme, Tree, type TreeDataNode } from 'antd';
 import type { ComponentRef, Key } from 'react';
 import { forwardRef, use, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThemeNameContext } from '../hooks/useThemeName';
+import { getChildren, getFormattedOuterXml, getNodePath, type NodeSummary } from '../lib/engine';
 import { paintFrame } from '../lib/paintFrame';
-import { getChildren, getFormattedOuterXml, getNodePath, type NodeSummary } from '../lib/tauri';
 import {
   decodeLoadMoreKey,
   findNode,
@@ -116,6 +116,7 @@ export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
   { docId, root, height, width, onSelectNode },
   ref,
 ) {
+  const { message } = App.useApp();
   const { t } = useTranslation();
   const {
     token: { colorBorder, borderRadius },
@@ -400,10 +401,10 @@ export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
                 <span>
                   {tokens
                     ? tokens.map((token, i) => (
-                        <span key={i} style={{ color: tokenColors[token.kind] }}>
-                          {token.text}
-                        </span>
-                      ))
+                      <span key={i} style={{ color: tokenColors[token.kind] }}>
+                        {token.text}
+                      </span>
+                    ))
                     : title}
                 </span>
                 {isLoading && <Spin size="small" />}

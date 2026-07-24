@@ -1,6 +1,7 @@
 body {
+  /* Top navbar is fixed, so reserve space for it. The bottom navbar flows with
+     the content (not fixed), so no bottom reservation is needed. */
   padding-top: 70px;
-  padding-bottom: 145px;
 }
 
 footer {

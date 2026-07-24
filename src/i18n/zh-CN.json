@@ -5,6 +5,7 @@
     "validate": "验证",
     "xpath": "XPath"
   },
+  "about": "关于",
   "app_description": "XML Explorer 是一款极快、轻量级的 XML 文件查看器。它可以处理超大的 XML 文件，已在高达 300MB 的文件上测试通过。它支持快速查看与浏览、复制格式化的 XML 数据、计算 XPath 表达式以及 XSD 模式验证。",
   "donate": "捐赠",
   "drag_drop_description": "将计算机中的 XML 文件拖放到此页面。",
@@ -22,6 +23,13 @@
     "load_more": "加载更多...（剩余 {{remaining, number}} 个）",
     "show_in_tree": "在树中显示"
   },
+  "update": {
+    "available": "有可用更新",
+    "web_description": "XML Explorer 有更新版本可用。重新加载即可更新。",
+    "native_description": "XML Explorer 应用有更新版本可用。",
+    "about_link": "获取最新版本",
+    "reload": "重新加载"
+  },
   "themes": {
     "auto": "自动",
     "auto_description": "根据您的系统设置和主题自动更改背景和内容。",
@@ -29,6 +37,8 @@
     "light": "浅色"
   },
   "validate": {
+    "web_note": "XSD 模式验证仅在桌面应用中可用。",
+    "web_note_link": "获取桌面应用",
     "error_count_other": "{{count, number}} 个错误",
     "failed_title": "验证失败",
     "line_col": "第 {{line}} 行，第 {{col}} 列",

@@ -2,7 +2,12 @@ import { CloseCircleOutlined, WarningOutlined } from '@ant-design/icons';
 import { Alert, Button, Drawer, List, Result, Space, Tag, Typography } from 'antd';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { validateDocument, type ValidationIssue } from '../lib/tauri';
+import { validateDocument, type ValidationIssue } from '../lib/engine';
+import { isDesktop } from '../lib/platform';
+
+// The old Windows marketing/download page; where web users are pointed for the
+// desktop app, which is the only build that can do XSD schema validation.
+const ABOUT_URL = 'about.html';
 
 interface ValidatePanelProps {
   docId: number;
@@ -18,6 +23,9 @@ export function ValidatePanel({ docId, onLocate, open, onClose }: ValidatePanelP
   const [issues, setIssues] = useState<ValidationIssue[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  // XSD schema validation is native-only; the browser build can't do it, so the
+  // web panel shows an explanatory note with a link to the desktop app instead.
+  const web = !isDesktop();
 
   const runValidation = useCallback(async () => {
     setPending(true);
@@ -34,12 +42,13 @@ export function ValidatePanel({ docId, onLocate, open, onClose }: ValidatePanelP
   }, [docId]);
 
   // Re-validate each time the drawer is opened -- the document on disk (or its
-  // referenced schema) may have changed since the last run.
+  // referenced schema) may have changed since the last run. Skipped on the web,
+  // which can't validate against a schema at all.
   useEffect(() => {
-    if (open) {
+    if (open && !web) {
       void runValidation();
     }
-  }, [open, runValidation]);
+  }, [open, web, runValidation]);
 
   const errorCount = issues?.filter((issue) => issue.severity === 'error').length ?? 0;
   const warningCount = issues?.filter((issue) => issue.severity === 'warning').length ?? 0;
@@ -53,11 +62,28 @@ export function ValidatePanel({ docId, onLocate, open, onClose }: ValidatePanelP
       styles={{ wrapper: { width: 440 } }}
       title={t('validate.title')}
       extra={
-        <Button size="small" loading={pending} onClick={() => void runValidation()}>
-          {t('validate.revalidate')}
-        </Button>
+        web ? undefined : (
+          <Button size="small" loading={pending} onClick={() => void runValidation()}>
+            {t('validate.revalidate')}
+          </Button>
+        )
       }
     >
+      {web && (
+        <Alert
+          type="info"
+          showIcon
+          description={
+            <>
+              {t('validate.web_note')}{' '}
+              <a href={ABOUT_URL} target="_blank" rel="noopener noreferrer">
+                {t('validate.web_note_link')}
+              </a>
+            </>
+          }
+        />
+      )}
+
       {error && (
         <Alert
           type="error"
