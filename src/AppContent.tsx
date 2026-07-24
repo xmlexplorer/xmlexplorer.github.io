@@ -139,7 +139,7 @@ export function AppContent() {
         setLoading(false);
       }
     })();
-  }, [doc]);
+  }, [doc, message]);
 
   const openExternal = useCallback((url: string) => {
     if (isDesktop()) {

@@ -268,7 +268,7 @@ export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
         void message.error(t('tree.copy_failed', { error: String(err) }));
       }
     })();
-  }, [contextMenuNode, docId, t]);
+  }, [contextMenuNode, docId, t, message]);
 
   const contextMenuItems = useMemo(
     () => [

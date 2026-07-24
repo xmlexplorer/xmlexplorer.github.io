@@ -19,6 +19,13 @@ export default defineConfig([
       globals: globals.browser
     }
   },
+  {
+    // Build/release tooling runs in Node, not the browser.
+    files: ["scripts/**", "*.config.{js,ts,mjs,cjs}", "eslint.config.js"],
+    languageOptions: {
+      globals: globals.node
+    }
+  },
   ...tseslint.configs.strict,
   {
     files: ["src/**/*.{ts,tsx}"],
