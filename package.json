@@ -1,6 +1,6 @@
 {
   "name": "xmlexplorer.github.io",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "XML Explorer is an extremely fast, lightweight XML file viewer. It can handle extremely large XML files, allows fast viewing and exploration, copying of formatted XML data, evaluation of XPath expressions, and XSD schema validation.",
   "type": "module",
   "scripts": {

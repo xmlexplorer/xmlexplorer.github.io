@@ -97,7 +97,28 @@ jobs:
           echo "value=${VERSION}" >> "$GITHUB_OUTPUT"
           node -e "const fs=require('fs'),c=JSON.parse(fs.readFileSync('native/tauri.conf.json','utf8'));c.version='${VERSION}';fs.writeFileSync('native/tauri.conf.json',JSON.stringify(c,null,2)+'\n')"
 
+      - name: Import Apple certificate
+        if: runner.os == 'macOS'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+        run: |
+          CERT_PATH="$RUNNER_TEMP/apple_cert.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+          echo -n "$APPLE_CERTIFICATE" | base64 --decode -o "$CERT_PATH"
+          security create-keychain -p "" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "" "$KEYCHAIN_PATH"
+          security import "$CERT_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
       - name: Build Tauri app
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: npx tauri build --config native/tauri.conf.json --target ${{ matrix.target }}
 
       - name: Rename artifacts
@@ -177,7 +198,7 @@ jobs:
               - .rpm: Fedora, RHEL, CentOS, openSUSE, etc.
             - **Windows**: Download and run the `.msi` installer or `setup.exe` (NSIS) installer file.
 
-            These builds are currently unsigned, so macOS/Windows may show an "unidentified developer" warning on first launch.
+            The Windows builds are currently unsigned, so Windows may show an "unidentified developer" warning on first launch.
 
           files: |
             **/*.dmg
