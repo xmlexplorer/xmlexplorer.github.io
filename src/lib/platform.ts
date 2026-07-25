@@ -8,6 +8,20 @@ export function isDesktop(): boolean {
 }
 
 /**
+ * Opens a URL outside the app: the system browser when running natively, a new
+ * tab on web. Native needs the opener plugin because the Tauri webview ignores
+ * `target="_blank"` -- a plain <a> there does nothing at best, and navigates
+ * the app's own window away at worst.
+ */
+export function openExternal(url: string): void {
+  if (isDesktop()) {
+    void import('@tauri-apps/plugin-opener').then(({ openUrl }) => openUrl(url));
+  } else {
+    window.open(url, '_blank', 'noopener');
+  }
+}
+
+/**
  * The version of the running native (Tauri) app, read from its bundled
  * tauri.conf.json. Dynamically imports the Tauri API so plain-browser builds
  * never pull it in. Only call when `isDesktop()` is true.

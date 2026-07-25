@@ -37,15 +37,10 @@ jobs:
       - run: npm run typecheck
       - run: npm run vitest
 
-      # Vite build -> dist/index.html (the web app) + hashed assets.
+      # Vite build -> dist/index.html (the web app) + hashed assets, plus
+      # everything in public/ (about.html, ads.txt, favicon.ico, resources/)
+      # copied verbatim to the site root.
       - run: npm run build
-
-      # dist/ is only the built app; fold in the static marketing/about page and
-      # the download/asset files it references so they ship to the same site root.
-      - name: Add static pages and assets
-        run: |
-          cp about.html favicon.ico ads.txt dist/
-          cp -r resources dist/resources
 
       - uses: actions/upload-pages-artifact@v3
         with:

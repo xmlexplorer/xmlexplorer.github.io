@@ -42,14 +42,21 @@ function emitVersionJson(): Plugin {
 
 // `index.html` at the project root is the React web app's entry point -- the
 // site's default page -- and is what `native/tauri.conf.json` loads too. The old
-// Windows marketing/download page now lives at `about.html` (a plain static page,
-// not a Vite entry); the Pages deploy copies it into `dist/` alongside this build.
-export default defineConfig({
+// Windows marketing/download page lives at `public/about.html` (a plain static
+// page, not a Vite entry), along with the download assets it references,
+// `ads.txt`, and the favicon: Vite copies all of `public/` to the site root.
+//
+// The native build (`--mode native`) drops `public/` entirely: Tauri bundles
+// `dist/` into the app, and none of those files -- a web marketing page, an
+// ads.txt, and ~2 MB of Windows installer downloads -- belong in a shipped
+// desktop binary.
+export default defineConfig(({ mode }) => ({
   define: {
     __APP_VERSION__: JSON.stringify(version),
     __GIT_HASH__: JSON.stringify(getGitHash()),
     __BASE_URL__: JSON.stringify('/'),
   },
+  publicDir: mode === 'native' ? false : 'public',
   plugins: [react(), emitVersionJson()],
   build: {
     outDir: 'dist',
@@ -57,4 +64,4 @@ export default defineConfig({
       input: 'index.html',
     },
   },
-});
+}));

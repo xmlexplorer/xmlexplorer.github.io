@@ -4,10 +4,11 @@
   "description": "XML Explorer is an extremely fast, lightweight XML file viewer. It can handle extremely large XML files, allows fast viewing and exploration, copying of formatted XML data, evaluation of XPath expressions, and XSD schema validation.",
   "type": "module",
   "scripts": {
-    "start": "npm run native",
+    "start": "vite",
     "test": "npm run lint && npm run typecheck && npm run vitest && npm run test:rust",
     "dev": "vite",
     "build": "vite build",
+    "build:native": "vite build --mode native",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "preview": "vite preview",
     "vitest": "vitest run",

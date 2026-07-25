@@ -1,12 +1,12 @@
-import { FileOutlined, FunctionOutlined, GithubOutlined, HeartOutlined, MoonOutlined, QuestionCircleOutlined, SafetyCertificateOutlined, SunOutlined } from '@ant-design/icons';
+import { FileOutlined, FunctionOutlined, GithubOutlined, HeartOutlined, InfoCircleOutlined, MoonOutlined, QuestionCircleOutlined, SafetyCertificateOutlined, SunOutlined } from '@ant-design/icons';
 import { open } from '@tauri-apps/plugin-dialog';
-import { openUrl } from '@tauri-apps/plugin-opener';
 import { App as AntApp, App, Button, Dropdown, Layout, Space, Typography, theme } from 'antd';
 import { use, useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DropOverlay } from './components/DropOverlay';
 import HelpPanel from './components/HelpPanel';
 import LanguageDropdown from './components/LanguageDropdown';
+import { DONATE_URL, GITHUB_URL, StatusBar } from './components/StatusBar';
 import { ValidatePanel } from './components/ValidatePanel';
 import { XPathPanel } from './components/XPathPanel';
 import { XmlTree, type XmlTreeHandle } from './components/XmlTree';
@@ -17,17 +17,17 @@ import { useUpdateCheck } from './hooks/useUpdateCheck';
 import { closeDocument, openDocument, type OpenedDocument } from './lib/engine';
 import { paintFrame } from './lib/paintFrame';
 import { baseName } from './lib/path';
-import { isDesktop } from './lib/platform';
+import { isDesktop, openExternal } from './lib/platform';
 
-const HEADER_HEIGHT = 'auto';
 const FOOTER_HEIGHT = 40;
-
-const DONATE_URL = 'https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=7827155';
-
-const GITHUB_URL = 'https://github.com/xmlexplorer/xmlexplorer.github.io';
 
 // The download/about page a native user is pointed at when a newer app is out.
 const ABOUT_URL = 'https://xmlexplorer.github.io/about.html';
+
+// The about page ships with the web site but not inside the native bundle
+// (vite's `--mode native` drops `public/`), so desktop has to open the deployed
+// copy rather than a relative path.
+const aboutUrl = () => (isDesktop() ? ABOUT_URL : 'about.html');
 
 // Watches for a newer deployed/released version and surfaces it as a bottom-right
 // notification: web users get a Reload button; native users get a link to the
@@ -65,7 +65,7 @@ function UpdateNotifier() {
         description: (
           <>
             {t('update.native_description')}{' '}
-            <a href={ABOUT_URL} onClick={(e) => { e.preventDefault(); void openUrl(ABOUT_URL); }}>
+            <a href={ABOUT_URL} onClick={(e) => { e.preventDefault(); openExternal(ABOUT_URL); }}>
               {t('update.about_link')}
             </a>
           </>
@@ -141,18 +141,6 @@ export function AppContent() {
     })();
   }, [doc, message]);
 
-  const openExternal = useCallback((url: string) => {
-    if (isDesktop()) {
-      void openUrl(url);
-    } else {
-      window.open(url, '_blank', 'noopener');
-    }
-  }, []);
-
-  const onDonate = useCallback(() => openExternal(DONATE_URL), [openExternal]);
-
-  const onGithub = useCallback(() => openExternal(GITHUB_URL), [openExternal]);
-
   const onOpenFile = useCallback(() => {
     // No extension filter: lots of formats are really XML (.svg, .rss, .xsl,
     // .csproj, .config, ...), so we let any file be picked and let the parser
@@ -191,7 +179,7 @@ export function AppContent() {
         <Layout.Header style={{ backgroundColor: colorBgContainer, height: 'auto', lineHeight: 'normal', padding: 4, display: 'flex', alignItems: 'center' }}>
 
           <Space wrap align="center">
-            {/* <span style={{ marginRight: 8, fontFamily: 'inherit' }}>XML Explorer</span> */}
+            <span style={{ marginRight: 8, fontFamily: 'inherit' }}>XML Explorer</span>
 
             <Button onClick={onOpenFile} loading={loading} icon={<FileOutlined />}>
               {t('actions.open_file')}
@@ -229,20 +217,33 @@ export function AppContent() {
                 <LanguageDropdown />
               </>)}
 
+            {/* onClick rather than <a href>: the native webview ignores
+                target="_blank", so external links have to go through
+                openExternal to reach the system browser. */}
             <Dropdown menu={{
               items: [
                 {
                   key: 'version',
                   label: `XML Explorer v${__APP_VERSION__} (${__GIT_HASH__})`,
-                  disabled: true,
+                  onClick: () => openExternal(aboutUrl()),
                 },
                 {
                   key: 'about',
-                  label: (
-                    <a href="about.html" target="_blank" rel="noopener noreferrer">
-                      {t('about')}
-                    </a>
-                  ),
+                  icon: <InfoCircleOutlined />,
+                  label: t('about'),
+                  onClick: () => openExternal(aboutUrl()),
+                },
+                {
+                  key: 'donate',
+                  icon: <HeartOutlined />,
+                  label: t('donate'),
+                  onClick: () => openExternal(DONATE_URL),
+                },
+                {
+                  key: 'code',
+                  icon: <GithubOutlined />,
+                  label: t('actions.code'),
+                  onClick: () => openExternal(GITHUB_URL),
                 },
               ]
             }}>
@@ -257,7 +258,10 @@ export function AppContent() {
         </Layout.Header>
         <Layout.Content
           ref={contentRef}
-          style={{ height: `calc(100% - ${HEADER_HEIGHT}px - ${FOOTER_HEIGHT}px)`, background: colorBgContainer, padding: 4 }}
+          // No explicit height: Layout is a flex column, so Content takes
+          // whatever the header and footer leave, and the footer's height
+          // varies with the ad banner.
+          style={{ background: colorBgContainer, padding: 4 }}
         >
           {doc && contentHeight > 0 && (
             // key={doc.docId} forces a full remount on each newly opened document --
@@ -277,21 +281,9 @@ export function AppContent() {
             <HelpPanel />
           )}
         </Layout.Content>
-        <Layout.Footer
-          style={{
-            height: FOOTER_HEIGHT,
-            padding: '0 16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-end',
-          }}
-        >
-          <Button type="link" size="small" icon={<HeartOutlined />} onClick={onDonate}>
-            {t('donate')}
-          </Button>
-          <Button type="link" size="small" icon={<GithubOutlined />} onClick={onGithub}>
-            {t('actions.code')}
-          </Button>
+        {/* StatusBar owns its own padding and background. */}
+        <Layout.Footer style={{ minHeight: FOOTER_HEIGHT, padding: 0 }}>
+          <StatusBar />
         </Layout.Footer>
       </Layout>
       {doc && (
