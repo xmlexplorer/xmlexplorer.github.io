@@ -17,7 +17,7 @@ See the [About page](https://xmlexplorer.github.io/about.html) for a side-by-sid
 This repo holds the web app (React + Vite, [`src/`](src/)) and the native app (Tauri,
 [`native/`](native/)); the same React frontend powers both. The web app is deployed to
 GitHub Pages by [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)
-on every push to `master`.
+on every push to `main`.
 
 ## Versioning
 
@@ -50,7 +50,7 @@ triggered by pushing a tag named `native-v<version>`.
 
 1. Pick the new version (semver, e.g. `0.1.2`).
 
-2. Set it in both `package.json` and `native/tauri.conf.json`, then push to `master`:
+2. Set it in both `package.json` and `native/tauri.conf.json`, then push to `main`:
 
    ```bash
    npm run set-version 0.1.2
@@ -58,7 +58,7 @@ triggered by pushing a tag named `native-v<version>`.
    git push
    ```
 
-   Pushing to `master` redeploys the web app and republishes `version.json` with the new
+   Pushing to `main` redeploys the web app and republishes `version.json` with the new
    `nativeVersion`, so running native apps on an older version show the in-app "update
    available" notification pointing to the About page — see
    [`src/hooks/useUpdateCheck.ts`](src/hooks/useUpdateCheck.ts). Skip this step and existing
