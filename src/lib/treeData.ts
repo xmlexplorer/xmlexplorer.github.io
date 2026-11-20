@@ -1,5 +1,6 @@
 import type { TreeDataNode } from 'antd';
 import type { Key } from 'react';
+import type { JsonRowInfo } from './jsonLabelTokens';
 import type { NodeSummary, NodeType } from './tauri';
 
 // Some real documents have nodes with millions of direct children (a flat list of
@@ -8,21 +9,51 @@ import type { NodeSummary, NodeType } from './tauri';
 // fetches and splices in the next page, instead of ever holding/rendering everything.
 export const LOAD_MORE_PREFIX = 'load-more:';
 
+// JSON containers get a closing-brace row (`}` / `]`) after their last child, so
+// an expanded object reads like the JSON it came from. Like "Load more...", it's
+// a UI-only row, not a document node: it can't be selected and doesn't count as
+// a child position.
+export const CLOSE_PREFIX = 'close:';
+
 // TreeDataNode plus the source node's type, so titleRender can syntax-highlight
 // the label (tag vs attribute vs comment, etc.) without re-deriving it from the
 // label string's shape.
 export interface XmlTreeDataNode extends TreeDataNode {
   nodeType?: NodeType;
+  // Present for JSON nodes: what the row renderer needs to draw it JSON-style.
+  json?: JsonRowInfo;
   children?: XmlTreeDataNode[];
 }
 
 export function toTreeNode(node: NodeSummary): XmlTreeDataNode {
-  return {
+  const treeNode: XmlTreeDataNode = {
     key: String(node.nodeId),
     title: node.label,
     isLeaf: !node.hasChildren,
     nodeType: node.nodeType,
   };
+  if (node.key !== undefined) {
+    treeNode.json = {
+      key: node.key ?? null,
+      index: node.index ?? null,
+      value: node.value,
+      childCount: node.childCount ?? null,
+    };
+  }
+  return treeNode;
+}
+
+export function closeNode(parentKey: Key, bracket: string): TreeDataNode {
+  return {
+    key: `${CLOSE_PREFIX}${String(parentKey)}`,
+    title: bracket,
+    isLeaf: true,
+    selectable: false,
+  };
+}
+
+export function isCloseKey(key: Key): boolean {
+  return typeof key === 'string' && key.startsWith(CLOSE_PREFIX);
 }
 
 export function encodeLoadMoreKey(parentKey: Key, nextOffset: number): string {
@@ -95,10 +126,15 @@ export function findNode(list: TreeDataNode[], key: Key): TreeDataNode | undefin
   return undefined;
 }
 
-// The real (non-"Load more...") children of a node -- the rows that correspond to
+// UI-only rows ("Load more...", closing braces) rather than document nodes.
+export function isPlaceholderKey(key: Key): boolean {
+  return isLoadMoreKey(key) || isCloseKey(key);
+}
+
+// The real (non-placeholder) children of a node -- the rows that correspond to
 // actual document nodes, in the order get_node_path indexes them.
 export function visibleChildren(node: TreeDataNode | undefined): TreeDataNode[] {
-  return (node?.children ?? []).filter((c) => !isLoadMoreKey(c.key));
+  return (node?.children ?? []).filter((c) => !isPlaceholderKey(c.key));
 }
 
 // Whether a node still has an unfetched next page (a "Load more..." placeholder).
@@ -107,7 +143,8 @@ export function hasLoadMore(node: TreeDataNode | undefined): boolean {
 }
 
 // Splices a freshly fetched page of children onto the node `parentKey`, dropping any
-// prior "Load more..." placeholder and appending a new one when more pages remain.
+// prior placeholder rows and appending a new "Load more..." when more pages remain,
+// or else the closing-brace row `closer`, if given (JSON containers).
 // Factored out of the component so the pagination-merge logic is unit-testable.
 export function mergePage(
   existing: TreeDataNode[] | undefined,
@@ -117,13 +154,14 @@ export function mergePage(
   total: number,
   hasMore: boolean,
   t: (key: string, options?: Record<string, unknown>) => string,
+  closer?: TreeDataNode,
 ): TreeDataNode[] {
-  const withoutPlaceholder = (existing ?? []).filter(
-    (n) => typeof n.key !== 'string' || !n.key.startsWith(LOAD_MORE_PREFIX),
-  );
+  const withoutPlaceholder = (existing ?? []).filter((n) => !isPlaceholderKey(n.key));
   const next = [...withoutPlaceholder, ...pageNodes];
   if (hasMore) {
     next.push(loadMoreNode(parentKey, loadedThrough, total - loadedThrough, t));
+  } else if (closer) {
+    next.push(closer);
   }
   return next;
 }

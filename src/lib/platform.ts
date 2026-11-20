@@ -22,6 +22,20 @@ export function openExternal(url: string): void {
 }
 
 /**
+ * Copies text to the clipboard: through the clipboard-manager plugin natively,
+ * the browser's async Clipboard API on web. The plugin is IPC-backed, so in a
+ * plain browser it throws (there's no Tauri runtime to invoke).
+ */
+export async function copyText(text: string): Promise<void> {
+  if (isDesktop()) {
+    const { writeText } = await import('@tauri-apps/plugin-clipboard-manager');
+    await writeText(text);
+  } else {
+    await navigator.clipboard.writeText(text);
+  }
+}
+
+/**
  * The version of the running native (Tauri) app, read from its bundled
  * tauri.conf.json. Dynamically imports the Tauri API so plain-browser builds
  * never pull it in. Only call when `isDesktop()` is true.

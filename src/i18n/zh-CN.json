@@ -1,6 +1,7 @@
 {
   "actions": {
     "code": "代码",
+    "jsonpath": "JSONPath",
     "open_file": "打开文件",
     "validate": "验证",
     "xpath": "XPath"
@@ -8,18 +9,28 @@
   "about": "关于",
   "app_description": "XML Explorer 是一款极快、轻量级的 XML 文件查看器。它可以处理超大的 XML 文件，已在高达 300MB 的文件上测试通过。它支持快速查看与浏览、复制格式化的 XML 数据、计算 XPath 表达式以及 XSD 模式验证。",
   "donate": "捐赠",
-  "drag_drop_description": "将计算机中的 XML 文件拖放到此页面。",
+  "drag_drop_description": "将计算机中的 XML 或 JSON 文件拖放到此页面。",
   "drop_overlay": {
-    "prompt": "松开以打开 XML 文件"
+    "prompt": "松开以打开 XML 或 JSON 文件"
   },
   "get_started_intro": "请执行以下操作之一以开始使用：",
   "getting_started": "快速入门",
+  "jsonpath": {
+    "example_placeholder": "JSONPath，例如 $.store.book[?@.price < 10].title",
+    "root_hint": "查询始终针对整个文档 ($) 运行。",
+    "title": "计算 JSONPath"
+  },
   "language": "语言",
-  "open_file_instruction": "点击“打开文件”按钮以从计算机中选择一个 XML 文件。",
+  "open_file_instruction": "点击“打开文件”按钮以从计算机中选择一个 XML 或 JSON 文件。",
+  "star_on_github": "在 GitHub 上点星",
+  "support_message": "XML Explorer 免费且开源。如果它对你有帮助，欢迎支持它的开发。",
   "theme": "主题",
   "tree": {
     "copy_failed": "复制失败：{{error}}",
+    "copy_formatted_json": "复制格式化的 JSON",
     "copy_formatted_xml": "复制格式化的 XML",
+    "json_items_other": "{{count, number}} 项",
+    "json_keys_other": "{{count, number}} 个键",
     "load_more": "加载更多...（剩余 {{remaining, number}} 个）",
     "show_in_tree": "在树中显示"
   },
@@ -51,6 +62,10 @@
     "title": "对照架构验证",
     "valid_title": "文档有效",
     "warning_count_other": "{{count, number}} 个警告"
+  },
+  "view": {
+    "show_array_indexes": "显示数组索引",
+    "title": "视图"
   },
   "xpath": {
     "context_hint": "—在树中选择一个节点以更改它。",

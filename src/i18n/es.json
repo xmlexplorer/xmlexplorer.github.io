@@ -1,6 +1,7 @@
 {
   "actions": {
     "code": "Código",
+    "jsonpath": "JSONPath",
     "open_file": "Abrir archivo",
     "validate": "Validar",
     "xpath": "XPath"
@@ -8,18 +9,30 @@
   "about": "Acerca de",
   "app_description": "XML Explorer es un visor de archivos XML extremadamente rápido y liviano. Puede manejar archivos XML extremadamente grandes. Se ha probado con archivos de hasta 300 MB. Permite la visualización y exploración rápidas, la copia de datos XML formateados, la evaluación de expresiones XPath y la validación de esquemas XSD.",
   "donate": "Donar",
-  "drag_drop_description": "Arrastra y suelta un archivo XML de tu computadora en esta página.",
+  "drag_drop_description": "Arrastra y suelta un archivo XML o JSON de tu computadora en esta página.",
   "drop_overlay": {
-    "prompt": "Suelta el archivo XML para abrirlo"
+    "prompt": "Suelta el archivo XML o JSON para abrirlo"
   },
   "get_started_intro": "Para empezar, realiza una de las siguientes acciones:",
   "getting_started": "Primeros pasos",
+  "jsonpath": {
+    "example_placeholder": "JSONPath, p. ej. $.store.book[?@.price < 10].title",
+    "root_hint": "Las consultas se ejecutan sobre todo el documento ($).",
+    "title": "Evaluar JSONPath"
+  },
   "language": "Idioma",
-  "open_file_instruction": "Haz clic en el botón \"Abrir archivo\" para seleccionar un archivo XML de tu computadora.",
+  "open_file_instruction": "Haz clic en el botón \"Abrir archivo\" para seleccionar un archivo XML o JSON de tu computadora.",
+  "star_on_github": "Dar una estrella en GitHub",
+  "support_message": "XML Explorer es gratuito y de código abierto. Si te resulta útil, considera apoyar su desarrollo.",
   "theme": "Tema",
   "tree": {
     "copy_failed": "No se pudo copiar: {{error}}",
+    "copy_formatted_json": "Copiar JSON formateado",
     "copy_formatted_xml": "Copiar XML formateado",
+    "json_items_one": "{{count, number}} elemento",
+    "json_items_other": "{{count, number}} elementos",
+    "json_keys_one": "{{count, number}} clave",
+    "json_keys_other": "{{count, number}} claves",
     "load_more": "Cargar más... ({{remaining, number}} restantes)",
     "show_in_tree": "Mostrar en el árbol"
   },
@@ -53,6 +66,10 @@
     "valid_title": "El documento es válido",
     "warning_count_one": "{{count, number}} advertencia",
     "warning_count_other": "{{count, number}} advertencias"
+  },
+  "view": {
+    "show_array_indexes": "Mostrar índices de los arrays",
+    "title": "Ver"
   },
   "xpath": {
     "context_hint": "— selecciona un nodo en el árbol para cambiarlo.",

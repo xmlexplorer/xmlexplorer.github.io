@@ -1,4 +1,4 @@
-import { FileOutlined, FunctionOutlined, GithubOutlined, HeartOutlined, InfoCircleOutlined, MoonOutlined, QuestionCircleOutlined, SafetyCertificateOutlined, SunOutlined } from '@ant-design/icons';
+import { EyeOutlined, FileOutlined, FunctionOutlined, GithubOutlined, HeartOutlined, InfoCircleOutlined, MoonOutlined, QuestionCircleOutlined, SafetyCertificateOutlined, SunOutlined } from '@ant-design/icons';
 import { open } from '@tauri-apps/plugin-dialog';
 import { App as AntApp, App, Button, Dropdown, Layout, Space, Typography, theme } from 'antd';
 import { use, useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { DropOverlay } from './components/DropOverlay';
 import HelpPanel from './components/HelpPanel';
 import LanguageDropdown from './components/LanguageDropdown';
-import { DONATE_URL, GITHUB_URL, StatusBar } from './components/StatusBar';
+import { StatusBar } from './components/StatusBar';
 import { ValidatePanel } from './components/ValidatePanel';
 import { XPathPanel } from './components/XPathPanel';
 import { XmlTree, type XmlTreeHandle } from './components/XmlTree';
@@ -18,8 +18,32 @@ import { closeDocument, openDocument, type OpenedDocument } from './lib/engine';
 import { paintFrame } from './lib/paintFrame';
 import { baseName } from './lib/path';
 import { isDesktop, openExternal } from './lib/platform';
+import { DONATE_URL, GITHUB_URL } from './lib/support';
 
 const FOOTER_HEIGHT = 40;
+
+// Remembers the JSON "Show array indexes" view option across visits. Storage can
+// be unavailable (private mode, blocked site data), so failures fall back to off.
+const SHOW_ARRAY_INDEXES_KEY = 'showArrayIndexes';
+
+function loadShowArrayIndexes(): boolean {
+  try {
+    return localStorage.getItem(SHOW_ARRAY_INDEXES_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function saveShowArrayIndexes(value: boolean) {
+  try {
+    localStorage.setItem(SHOW_ARRAY_INDEXES_KEY, String(value));
+  } catch {
+    // Not persisted; the option still applies for this session.
+  }
+}
+
+// The descriptive <title> from index.html, which search results show.
+const DEFAULT_TITLE = document.title;
 
 // The download/about page a native user is pointed at when a newer app is out.
 const ABOUT_URL = 'https://xmlexplorer.github.io/about.html';
@@ -88,6 +112,13 @@ export function AppContent() {
   const [xpathOpen, setXpathOpen] = useState(false);
   const [validateOpen, setValidateOpen] = useState(false);
   const [selectedNode, setSelectedNode] = useState<{ nodeId: number; label: string } | null>(null);
+  const [showArrayIndexes, setShowArrayIndexes] = useState(loadShowArrayIndexes);
+  const toggleShowArrayIndexes = useCallback(() => {
+    setShowArrayIndexes((prev) => {
+      saveShowArrayIndexes(!prev);
+      return !prev;
+    });
+  }, []);
   const contentRef = useRef<HTMLDivElement>(null);
   const treeRef = useRef<XmlTreeHandle>(null);
   // Web-only: a hidden <input type="file"> stands in for the native OS file
@@ -95,6 +126,9 @@ export function AppContent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [contentHeight, setContentHeight] = useState(0);
   const [contentWidth, setContentWidth] = useState(0);
+  // Counts successfully opened documents, so the footer can request an ad for
+  // the new content.
+  const [docLoadCount, setDocLoadCount] = useState(0);
 
   const { token: { colorBgContainer } } = theme.useToken();
 
@@ -104,6 +138,13 @@ export function AppContent() {
   const themeMenuItems = useThemeMenuItems();
 
   const { isDragging, invalidDrop } = useFileDrop((source) => onLoadFile(source));
+
+  // The desktop app's window keeps a short title rather than the web page's
+  // search-oriented one.
+  useEffect(() => {
+    const baseTitle = isDesktop() ? 'XML Explorer' : DEFAULT_TITLE;
+    document.title = fileName ? `${fileName} | XML Explorer` : baseTitle;
+  }, [fileName]);
 
   useEffect(() => {
     if (!contentRef.current) {
@@ -133,6 +174,7 @@ export function AppContent() {
         setDoc(opened);
         setFileName(typeof source === 'string' ? baseName(source) : source.name);
         setSelectedNode(null);
+        setDocLoadCount((count) => count + 1);
       } catch (err) {
         void message.error(String(err));
       } finally {
@@ -196,19 +238,36 @@ export function AppContent() {
                   disabled={!doc}
                   icon={<FunctionOutlined />}
                 >
-                  {t('actions.xpath')}
+                  {doc.format === 'json' ? t('actions.jsonpath') : t('actions.xpath')}
                 </Button>
 
-                <Button
-                  onClick={() => {
-                    setXpathOpen(false);
-                    setValidateOpen(true);
-                  }}
-                  disabled={!doc}
-                  icon={<SafetyCertificateOutlined />}
-                >
-                  {t('actions.validate')}
-                </Button>
+                {/* XSD validation is XML-only. */}
+                {doc.format === 'xml' && (
+                  <Button
+                    onClick={() => {
+                      setXpathOpen(false);
+                      setValidateOpen(true);
+                    }}
+                    disabled={!doc}
+                    icon={<SafetyCertificateOutlined />}
+                  >
+                    {t('actions.validate')}
+                  </Button>
+                )}
+
+                {doc.format === 'json' && (
+                  <Dropdown
+                    menu={{
+                      selectable: true,
+                      multiple: true,
+                      selectedKeys: showArrayIndexes ? ['array-indexes'] : [],
+                      onClick: toggleShowArrayIndexes,
+                      items: [{ key: 'array-indexes', label: t('view.show_array_indexes') }],
+                    }}
+                  >
+                    <Button icon={<EyeOutlined />}>{t('view.title')}</Button>
+                  </Dropdown>
+                )}
 
                 <Dropdown menu={{ items: themeMenuItems, selectedKeys: [themeName] }}>
                   <Button icon={isDarkMode ? <MoonOutlined /> : <SunOutlined />}>{t('theme')}</Button>
@@ -271,6 +330,8 @@ export function AppContent() {
               ref={treeRef}
               key={doc.docId}
               docId={doc.docId}
+              format={doc.format}
+              showArrayIndexes={showArrayIndexes}
               root={doc.root}
               height={contentHeight}
               width={contentWidth}
@@ -283,7 +344,7 @@ export function AppContent() {
         </Layout.Content>
         {/* StatusBar owns its own padding and background. */}
         <Layout.Footer style={{ minHeight: FOOTER_HEIGHT, padding: 0 }}>
-          <StatusBar />
+          <StatusBar docLoadCount={docLoadCount} />
         </Layout.Footer>
       </Layout>
       {doc && (
@@ -291,6 +352,7 @@ export function AppContent() {
         <XPathPanel
           key={doc.docId}
           docId={doc.docId}
+          format={doc.format}
           contextNodeId={selectedNode?.nodeId ?? doc.root.nodeId}
           contextLabel={selectedNode?.label || doc.root.label}
           onLocate={(nodeId) => treeRef.current?.reveal(nodeId)}
@@ -298,7 +360,7 @@ export function AppContent() {
           onClose={() => setXpathOpen(false)}
         />
       )}
-      {doc && (
+      {doc?.format === 'xml' && (
         // key={doc.docId} resets the panel's results when a new file is opened.
         <ValidatePanel
           key={doc.docId}

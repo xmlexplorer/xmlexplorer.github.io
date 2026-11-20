@@ -8,6 +8,7 @@
 // semantics below are faithful ports of `native/src/{tree,xpath,document}.rs`,
 // so the React UI (XmlTree, XPathPanel, ...) behaves identically against either
 // backend. XSD validation is the one native-only feature -- see validateDocument.
+// JSON files are handled by JsonDocument (jsonDocument.ts) behind the same API.
 //
 // Trade-off vs. native: this holds the whole DOM in memory and can't stream, so
 // it targets everyday files, not the multi-GB ones the native app is built for.
@@ -19,6 +20,7 @@ import type {
   OpenedDocument,
   XPathResult,
 } from './tauri';
+import { JsonDocument } from './jsonDocument';
 
 // Mirrors native/src/tree.rs: cap the text preview, page size for children and
 // XPath node-sets. Kept identical so paging behaves the same as the native build.
@@ -45,15 +47,26 @@ interface WebDocument {
   xpathCache: XPathCache | null;
 }
 
-const store = new Map<number, WebDocument>();
+const store = new Map<number, WebDocument | JsonDocument>();
 let nextDocId = 0;
 
-function getDoc(docId: number): WebDocument {
-  const wd = store.get(docId);
-  if (!wd) {
+function getAnyDoc(docId: number): WebDocument | JsonDocument {
+  const doc = store.get(docId);
+  if (!doc) {
     throw new Error(`document ${docId} is not open`);
   }
-  return wd;
+  return doc;
+}
+
+// Opens as JSON when the name says so, or when the content can't be XML but
+// looks like JSON (XML always starts with '<'). Anything else goes to the XML
+// parser, so XML in files with other extensions (.svg, .config, ...) still works.
+export function looksLikeJson(fileName: string, text: string): boolean {
+  if (/\.json$/i.test(fileName)) {
+    return true;
+  }
+  const first = /\S/.exec(text.replace(/^\uFEFF/, ''))?.[0];
+  return first === '{' || first === '[';
 }
 
 function getNode(wd: WebDocument, nodeId: number): Node {
@@ -204,6 +217,19 @@ function pageOf(wd: WebDocument, ids: number[], offset: number): NodeSummaryPage
 
 export async function openDocument(file: File): Promise<OpenedDocument> {
   const text = await file.text();
+
+  if (looksLikeJson(file.name, text)) {
+    let json: JsonDocument;
+    try {
+      json = JsonDocument.parse(text.replace(/^\uFEFF/, ''));
+    } catch (err) {
+      throw new Error(`failed to parse '${file.name}': ${err instanceof Error ? err.message : String(err)}`);
+    }
+    const docId = nextDocId++;
+    store.set(docId, json);
+    return { docId, format: 'json', root: json.rootSummary() };
+  }
+
   const dom = new DOMParser().parseFromString(text, 'application/xml');
 
   // DOMParser never throws: on malformed XML it returns a document whose body is
@@ -227,7 +253,7 @@ export async function openDocument(file: File): Promise<OpenedDocument> {
     xpathCache: null,
   });
 
-  return { docId, root: buildNodeSummary(0, root) };
+  return { docId, format: 'xml', root: buildNodeSummary(0, root) };
 }
 
 export async function closeDocument(docId: number): Promise<void> {
@@ -238,7 +264,11 @@ export async function closeDocument(docId: number): Promise<void> {
 // every non-whitespace child and memoizes the id list; later calls (and pages)
 // re-read the cache.
 export async function getChildren(docId: number, nodeId: number, offset = 0): Promise<NodeSummaryPage> {
-  const wd = getDoc(docId);
+  const doc = getAnyDoc(docId);
+  if (doc instanceof JsonDocument) {
+    return doc.getChildren(nodeId, offset);
+  }
+  const wd = doc;
   let ids = wd.expanded.get(nodeId);
   if (!ids) {
     const node = getNode(wd, nodeId);
@@ -257,7 +287,11 @@ export async function getChildren(docId: number, nodeId: number, offset = 0): Pr
 // element down to nodeId, counting only nodes the tree shows (whitespace skipped).
 // An attribute resolves to its owner element's path.
 export async function getNodePath(docId: number, nodeId: number): Promise<number[]> {
-  const wd = getDoc(docId);
+  const doc = getAnyDoc(docId);
+  if (doc instanceof JsonDocument) {
+    return doc.getNodePath(nodeId);
+  }
+  const wd = doc;
   let current: Node | null = getNode(wd, nodeId);
   if (current.nodeType === Node.ATTRIBUTE_NODE) {
     current = (current as Attr).ownerElement;
@@ -323,7 +357,8 @@ function discoverNamespaces(wd: WebDocument): NamespaceDefinition[] {
 }
 
 export async function listNamespaces(docId: number): Promise<NamespaceDefinition[]> {
-  return discoverNamespaces(getDoc(docId));
+  const doc = getAnyDoc(docId);
+  return doc instanceof JsonDocument ? [] : discoverNamespaces(doc);
 }
 
 // Port of xpath_page (native/src/xpath.rs): build one page of the cached node-set,
@@ -350,13 +385,20 @@ function xpathPage(wd: WebDocument, offset: number): NodeSummaryPage {
 // Port of evaluate_xpath (native/src/xpath.rs). A node-set comes back paged (and
 // cached, so paging doesn't re-run the query); a number/string/boolean comes back
 // as a scalar. Namespaces discovered in the document are exposed to the resolver.
-export async function evaluateXPath(
+// XPath for XML documents, JSONPath for JSON ones. nodeId is the XPath context
+// node; JSONPath ignores it (see jsonDocument.ts).
+export async function evaluateQuery(
   docId: number,
   nodeId: number,
   expression: string,
   offset = 0,
 ): Promise<XPathResult> {
-  const wd = getDoc(docId);
+  const doc = getAnyDoc(docId);
+  if (doc instanceof JsonDocument) {
+    // JSONPath always yields a node list, evaluated from the document root.
+    return { kind: 'nodeset', page: doc.evaluateQuery(expression, offset) };
+  }
+  const wd = doc;
 
   const cache = wd.xpathCache;
   if (cache && cache.nodeId === nodeId && cache.expression === expression) {
@@ -467,7 +509,11 @@ function serializeInline(node: Node): string {
   return escapeText(node.nodeValue ?? '');
 }
 
-export async function getFormattedOuterXml(docId: number, nodeId: number): Promise<string> {
-  const wd = getDoc(docId);
-  return serializeNode(getNode(wd, nodeId), '');
+// Pretty-printed source for the node: outer XML, or the JSON value.
+export async function getFormattedSource(docId: number, nodeId: number): Promise<string> {
+  const doc = getAnyDoc(docId);
+  if (doc instanceof JsonDocument) {
+    return doc.getFormatted(nodeId);
+  }
+  return serializeNode(getNode(doc, nodeId), '');
 }

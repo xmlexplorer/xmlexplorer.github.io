@@ -1,6 +1,7 @@
 {
   "actions": {
     "code": "Código",
+    "jsonpath": "JSONPath",
     "open_file": "Abrir arquivo",
     "validate": "Validar",
     "xpath": "XPath"
@@ -8,18 +9,30 @@
   "about": "Sobre",
   "app_description": "O XML Explorer é um visualizador de arquivos XML extremamente rápido e leve. Ele pode lidar com arquivos XML extremamente grandes e já foi testado com arquivos de até 300 MB. Ele permite visualização e exploração rápidas, cópia de dados XML formatados, avaliação de expressões XPath e validação de esquema XSD.",
   "donate": "Doar",
-  "drag_drop_description": "Arraste e solte um arquivo XML do seu computador nesta página.",
+  "drag_drop_description": "Arraste e solte um arquivo XML ou JSON do seu computador nesta página.",
   "drop_overlay": {
-    "prompt": "Solte o arquivo XML para abri-lo"
+    "prompt": "Solte o arquivo XML ou JSON para abri-lo"
   },
   "get_started_intro": "Para começar, faça uma das opções a seguir:",
   "getting_started": "Primeiros passos",
+  "jsonpath": {
+    "example_placeholder": "JSONPath, ex.: $.store.book[?@.price < 10].title",
+    "root_hint": "As consultas são executadas no documento inteiro ($).",
+    "title": "Avaliar JSONPath"
+  },
   "language": "Idioma",
-  "open_file_instruction": "Clique no botão \"Abrir arquivo\" para selecionar um arquivo XML do seu computador.",
+  "open_file_instruction": "Clique no botão \"Abrir arquivo\" para selecionar um arquivo XML ou JSON do seu computador.",
+  "star_on_github": "Dar uma estrela no GitHub",
+  "support_message": "O XML Explorer é gratuito e de código aberto. Se ele for útil para você, considere apoiar o seu desenvolvimento.",
   "theme": "Tema",
   "tree": {
     "copy_failed": "Falha ao copiar: {{error}}",
+    "copy_formatted_json": "Copiar JSON formatado",
     "copy_formatted_xml": "Copiar XML formatado",
+    "json_items_one": "{{count, number}} item",
+    "json_items_other": "{{count, number}} itens",
+    "json_keys_one": "{{count, number}} chave",
+    "json_keys_other": "{{count, number}} chaves",
     "load_more": "Carregar mais... ({{remaining, number}} restantes)",
     "show_in_tree": "Mostrar na árvore"
   },
@@ -53,6 +66,10 @@
     "valid_title": "O documento é válido",
     "warning_count_one": "{{count, number}} aviso",
     "warning_count_other": "{{count, number}} avisos"
+  },
+  "view": {
+    "show_array_indexes": "Mostrar índices dos arrays",
+    "title": "Exibir"
   },
   "xpath": {
     "context_hint": "— selecione um nó na árvore para alterá-lo.",

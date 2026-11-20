@@ -2,10 +2,12 @@ import type { TreeDataNode } from 'antd';
 import { describe, expect, it } from 'vitest';
 import {
   LOAD_MORE_PREFIX,
+  closeNode,
   decodeLoadMoreKey,
   encodeLoadMoreKey,
   findNode,
   hasLoadMore,
+  isCloseKey,
   isLoadMoreKey,
   loadMoreNode,
   mergePage,
@@ -167,5 +169,42 @@ describe('mergePage', () => {
     );
     expect(placeholders).toHaveLength(1); // exactly one, the fresh one
     expect(merged.map((n) => n.key)).toEqual(['1', '2', encodeLoadMoreKey('0', 2)]);
+  });
+
+  it('appends the closing-brace row only once the last page is in', () => {
+    const closer = closeNode('0', '}');
+    const first = mergePage(undefined, '0', page, 2, 4, true, stubT, closer);
+    expect(first.some((n) => isCloseKey(n.key))).toBe(false);
+    const rest = [
+      { key: '3', title: 'three', isLeaf: true },
+      { key: '4', title: 'four', isLeaf: true },
+    ];
+    const merged = mergePage(first, '0', rest, 4, 4, false, stubT, closer);
+    expect(merged.map((n) => n.key)).toEqual(['1', '2', '3', '4', 'close:0']);
+  });
+});
+
+describe('JSON rows', () => {
+  it('toTreeNode carries the JSON row fields', () => {
+    expect(
+      toTreeNode({
+        nodeId: 3,
+        nodeType: 'array',
+        label: '"tags": […]',
+        hasChildren: true,
+        value: null,
+        key: 'tags',
+        index: null,
+        childCount: 2,
+      }).json,
+    ).toEqual({ key: 'tags', index: null, value: null, childCount: 2 });
+  });
+
+  it('closing-brace rows are unselectable placeholders that do not count as children', () => {
+    const closer = closeNode('7', ']');
+    expect(closer).toMatchObject({ key: 'close:7', title: ']', isLeaf: true, selectable: false });
+    const parent = { key: '7', title: '[', children: [{ key: '8', title: '1' }, closer] };
+    expect(visibleChildren(parent).map((n) => n.key)).toEqual(['8']);
+    expect(hasLoadMore(parent)).toBe(false);
   });
 });

@@ -1,6 +1,12 @@
 import { invoke } from '@tauri-apps/api/core';
 
-export type NodeType = 'element' | 'attribute' | 'text' | 'cdata' | 'comment' | 'pi' | 'document' | 'other';
+export type XmlNodeType = 'element' | 'attribute' | 'text' | 'cdata' | 'comment' | 'pi' | 'document' | 'other';
+export type JsonNodeType = 'object' | 'array' | 'string' | 'number' | 'boolean' | 'null';
+export type NodeType = XmlNodeType | JsonNodeType;
+
+// Which kind of document an engine opened. The UI switches labels, the query
+// language (XPath vs JSONPath), and the copy format on this.
+export type DocumentFormat = 'xml' | 'json';
 
 export interface NodeSummary {
   nodeId: number;
@@ -9,11 +15,23 @@ export interface NodeSummary {
   hasChildren: boolean;
   // A text-content preview for plain-text leaf elements (e.g. "Widget 0" for
   // <name>Widget 0</name>); null otherwise. Shown in XPath results.
+  // For a JSON scalar, its JSON literal text (e.g. `"Widget"`, `42`, `null`).
   value: string | null;
+  // JSON-only structure, so the tree can render a row JSON-style (key, array
+  // index, collapsed `{ … } 3 keys`) without re-parsing the label. Absent for XML.
+  // `key` is the member name when the parent is an object; `index` the position
+  // when the parent is an array; `childCount` the entry count of an object/array.
+  key?: string | null;
+  index?: number | null;
+  childCount?: number | null;
+  // JSON-only: the node's normalized JSONPath (e.g. `$['store']['book'][0]`),
+  // filled in for query results so each match shows where it came from.
+  path?: string;
 }
 
 export interface OpenedDocument {
   docId: number;
+  format: DocumentFormat;
   root: NodeSummary;
 }
 
@@ -96,7 +114,8 @@ function fromRawPage(raw: RawNodeSummaryPage): NodeSummaryPage {
 
 export async function openDocument(path: string): Promise<OpenedDocument> {
   const raw = await invoke<RawOpenedDocument>('open_document_cmd', { path });
-  return { docId: raw.doc_id, root: fromRawNode(raw.root) };
+  // The native engine only opens XML so far.
+  return { docId: raw.doc_id, format: 'xml', root: fromRawNode(raw.root) };
 }
 
 export async function closeDocument(docId: number): Promise<void> {

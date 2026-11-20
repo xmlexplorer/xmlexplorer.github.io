@@ -1,16 +1,19 @@
 import { CaretDownFilled, CopyOutlined, LoadingOutlined } from '@ant-design/icons';
-import { writeText } from '@tauri-apps/plugin-clipboard-manager';
 import { App, Dropdown, Spin, theme, Tree, type TreeDataNode } from 'antd';
 import type { ComponentRef, Key } from 'react';
 import { forwardRef, use, useCallback, useImperativeHandle, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThemeNameContext } from '../hooks/useThemeName';
-import { getChildren, getFormattedOuterXml, getNodePath, type NodeSummary } from '../lib/engine';
+import { getChildren, getFormattedSource, getNodePath, type DocumentFormat, type NodeSummary } from '../lib/engine';
+import { bracketsOf, isJsonNodeType, jsonRowTokens, type JsonTokenKind } from '../lib/jsonLabelTokens';
 import { paintFrame } from '../lib/paintFrame';
+import { copyText } from '../lib/platform';
 import {
+  closeNode,
   decodeLoadMoreKey,
   findNode,
   hasLoadMore,
+  isCloseKey,
   mergePage,
   toTreeNode,
   visibleChildren,
@@ -27,6 +30,9 @@ export interface XmlTreeHandle {
 
 interface XmlTreeProps {
   docId: number;
+  format: DocumentFormat;
+  // JSON only: prefix array items with a dim `0: ` index.
+  showArrayIndexes?: boolean;
   root: NodeSummary;
   height: number;
   // The viewport width. scrollWidth is floored to this so rc-virtual-list's
@@ -51,6 +57,9 @@ const REVEAL_MAX_PAGES_PER_LEVEL = 40;
 const TREE_FONT_PX = 14; // antd's default tree font size
 const INDENT_PX = 24; // antd's per-level indent unit
 const ROW_CHROME_PX = 48; // switcher + padding + a little trailing slack
+// A collapsed JSON container row renders wider than its label (`{ … }  25,000
+// keys`, plus an optional `123: ` index); reserve room for that.
+const JSON_ROW_EXTRA = '123456:   … }  1,000,000 items';
 
 let measureCtx: CanvasRenderingContext2D | null | undefined;
 function measureMonospace(text: string): number {
@@ -69,7 +78,10 @@ function measureMonospace(text: string): number {
 function widestRow(nodes: TreeDataNode[], depth: number): number {
   let max = 0;
   for (const node of nodes) {
-    const label = typeof node.title === 'string' ? node.title : '';
+    let label = typeof node.title === 'string' ? node.title : '';
+    if ((node as XmlTreeDataNode).json) {
+      label += JSON_ROW_EXTRA;
+    }
     const width = ROW_CHROME_PX + depth * INDENT_PX + measureMonospace(label);
     if (width > max) {
       max = width;
@@ -108,12 +120,33 @@ const LIGHT_TOKEN_COLORS: Partial<Record<XmlLabelTokenKind, string>> = {
   comment: '#6e7781',
 };
 
+// JSON rows reuse the same palettes: keys take the tag color, strings the
+// string color, numbers/booleans/null the attribute-name blue (GitHub's
+// "constant" color), and indexes/counts the comment gray. Punctuation inherits.
+const DARK_JSON_COLORS: Partial<Record<JsonTokenKind, string>> = {
+  key: DARK_TOKEN_COLORS.tagName,
+  string: DARK_TOKEN_COLORS.attrValue,
+  number: DARK_TOKEN_COLORS.attrName,
+  boolean: DARK_TOKEN_COLORS.attrName,
+  null: DARK_TOKEN_COLORS.attrName,
+  meta: DARK_TOKEN_COLORS.comment,
+};
+
+const LIGHT_JSON_COLORS: Partial<Record<JsonTokenKind, string>> = {
+  key: LIGHT_TOKEN_COLORS.tagName,
+  string: LIGHT_TOKEN_COLORS.attrValue,
+  number: LIGHT_TOKEN_COLORS.attrName,
+  boolean: LIGHT_TOKEN_COLORS.attrName,
+  null: LIGHT_TOKEN_COLORS.attrName,
+  meta: LIGHT_TOKEN_COLORS.comment,
+};
+
 // editor.background from the same two theme JSON files.
 const DARK_EDITOR_BG = '#121314';
 const LIGHT_EDITOR_BG = '#FFFFFF';
 
 export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
-  { docId, root, height, width, onSelectNode },
+  { docId, format, showArrayIndexes = false, root, height, width, onSelectNode },
   ref,
 ) {
   const { message } = App.useApp();
@@ -126,6 +159,7 @@ export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
   // sync with it automatically.
   const isDarkMode = use(ThemeNameContext)?.isDarkMode ?? false;
   const tokenColors = isDarkMode ? DARK_TOKEN_COLORS : LIGHT_TOKEN_COLORS;
+  const jsonColors = isDarkMode ? DARK_JSON_COLORS : LIGHT_JSON_COLORS;
   const editorBg = isDarkMode ? DARK_EDITOR_BG : LIGHT_EDITOR_BG;
 
   const [treeData, setTreeDataState] = useState<TreeDataNode[]>([toTreeNode(root)]);
@@ -157,6 +191,8 @@ export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
     setExpandedKeysState(keys);
   }, []);
   const [selectedKeys, setSelectedKeys] = useState<Key[]>([]);
+  // JSON rows render differently expanded (`"a": {`) vs collapsed (`"a": { … }`).
+  const expandedSet = useMemo(() => new Set(expandedKeys), [expandedKeys]);
 
   // Tracked separately from treeData (rather than baked into each node's title) so a
   // node already past, say, half a second of loading -- the large fixture's root takes
@@ -185,10 +221,17 @@ export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
         const page = await getChildren(docId, nodeId, offset);
         const pageNodes = page.items.map(toTreeNode);
         const loadedThrough = page.offset + page.items.length;
+        // JSON objects/arrays end with a closing-brace row once fully loaded.
+        const parent: XmlTreeDataNode | undefined = findNode(treeDataRef.current, parentKey);
+        const parentType = parent?.nodeType;
+        const closer =
+          parentType === 'object' || parentType === 'array'
+            ? closeNode(parentKey, bracketsOf(parentType)[1])
+            : undefined;
 
         applyTreeUpdate((prev) =>
           withChildrenAt(prev, parentKey, (existing) =>
-            mergePage(existing, parentKey, pageNodes, loadedThrough, page.total, page.hasMore, t),
+            mergePage(existing, parentKey, pageNodes, loadedThrough, page.total, page.hasMore, t, closer),
           ),
         );
       } finally {
@@ -223,6 +266,9 @@ export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
         void loadPageInto(loadMore.parentKey, loadMore.offset);
         return;
       }
+      if (isCloseKey(info.node.key)) {
+        return;
+      }
       setSelectedKeys(keys);
       if (keys.length === 0) {
         onSelectNode?.(null);
@@ -240,8 +286,8 @@ export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
 
   const onRightClick = useCallback(
     ({ event, node }: { event: React.MouseEvent; node: TreeDataNode }) => {
-      if (decodeLoadMoreKey(node.key)) {
-        // "Load more..." rows aren't real nodes -- nothing to copy, so stop the
+      if (decodeLoadMoreKey(node.key) || isCloseKey(node.key)) {
+        // "Load more..." and closing-brace rows aren't real nodes -- nothing to copy, so stop the
         // event reaching the wrapping Dropdown's contextMenu trigger rather than
         // popping open a menu with nothing to act on.
         event.stopPropagation();
@@ -255,15 +301,15 @@ export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
     [onSelectNode],
   );
 
-  const onCopyFormattedXml = useCallback(() => {
+  const onCopyFormatted = useCallback(() => {
     const node = contextMenuNode;
     if (!node) {
       return;
     }
     void (async () => {
       try {
-        const xml = await getFormattedOuterXml(docId, Number(node.key));
-        await writeText(xml);
+        const source = await getFormattedSource(docId, Number(node.key));
+        await copyText(source);
       } catch (err) {
         void message.error(t('tree.copy_failed', { error: String(err) }));
       }
@@ -273,13 +319,13 @@ export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
   const contextMenuItems = useMemo(
     () => [
       {
-        key: 'copy-formatted-xml',
+        key: 'copy-formatted',
         icon: <CopyOutlined />,
-        label: t('tree.copy_formatted_xml'),
-        onClick: onCopyFormattedXml,
+        label: format === 'json' ? t('tree.copy_formatted_json') : t('tree.copy_formatted_xml'),
+        onClick: onCopyFormatted,
       },
     ],
-    [t, onCopyFormattedXml],
+    [t, format, onCopyFormatted],
   );
 
   // Walk get_node_path's child-index path from the root, lazily loading (and
@@ -390,7 +436,33 @@ export const XmlTree = forwardRef<XmlTreeHandle, XmlTreeProps>(function XmlTree(
             // antd's own callback signature only knows about plain DataNode, so the
             // nodeType toTreeNode attached (see XmlTreeDataNode) needs a cast to read
             // back here -- the underlying objects are the same ones from treeData.
-            const nodeType = (node as XmlTreeDataNode).nodeType;
+            const { nodeType, json } = node as XmlTreeDataNode;
+            if (isCloseKey(node.key)) {
+              // A closing brace sits one level deeper than its container (it's
+              // the container's last child row); pull it back one indent so it
+              // lines up under the opening brace, as in pretty-printed JSON.
+              return <span style={{ display: 'inline-block', transform: `translateX(-${INDENT_PX}px)` }}>{title}</span>;
+            }
+            if (json && nodeType && isJsonNodeType(nodeType)) {
+              const countText =
+                json.childCount && !expandedSet.has(node.key)
+                  ? t(nodeType === 'array' ? 'tree.json_items' : 'tree.json_keys', { count: json.childCount })
+                  : null;
+              const jsonTokens = jsonRowTokens(nodeType, json, {
+                expanded: expandedSet.has(node.key),
+                showIndex: showArrayIndexes,
+                countText,
+              });
+              return (
+                <span>
+                  {jsonTokens.map((token, i) => (
+                    <span key={i} style={{ color: jsonColors[token.kind] }}>
+                      {token.text}
+                    </span>
+                  ))}
+                </span>
+              );
+            }
             const tokens =
               typeof title === 'string' && nodeType ? tokenizeXmlLabel(title, nodeType) : null;
             return (

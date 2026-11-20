@@ -1,10 +1,13 @@
 import { Alert, Button, Drawer, Input, List, Space, Tag, Typography } from 'antd';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { evaluateXPath, type NodeSummary } from '../lib/engine';
+import { evaluateQuery, type DocumentFormat, type NodeSummary } from '../lib/engine';
 
+// Evaluates XPath against XML documents and JSONPath against JSON ones; the two
+// share paging, result listing, and reveal-in-tree.
 interface XPathPanelProps {
   docId: number;
+  format: DocumentFormat;
   // The context node XPath is evaluated against -- the selected tree node, or the
   // document root when nothing is selected, mirroring the original's behavior.
   contextNodeId: number;
@@ -24,6 +27,7 @@ type View =
 
 export function XPathPanel({
   docId,
+  format,
   contextNodeId,
   contextLabel,
   onLocate,
@@ -31,6 +35,7 @@ export function XPathPanel({
   onClose,
 }: XPathPanelProps) {
   const { t } = useTranslation();
+  const isJson = format === 'json';
   const [expression, setExpression] = useState('');
   // The expression the current results belong to -- paging "Load more" must use
   // this, not whatever's since been typed into the input.
@@ -47,7 +52,7 @@ export function XPathPanel({
     setPending(true);
     setError(null);
     try {
-      const result = await evaluateXPath(docId, contextNodeId, expr, 0);
+      const result = await evaluateQuery(docId, contextNodeId, expr, 0);
       setEvaluatedExpr(expr);
       if (result.kind === 'scalar') {
         setView({ kind: 'scalar', valueType: result.valueType, value: result.value });
@@ -69,7 +74,7 @@ export function XPathPanel({
     }
     setPending(true);
     try {
-      const result = await evaluateXPath(docId, contextNodeId, evaluatedExpr, view.loadedThrough);
+      const result = await evaluateQuery(docId, contextNodeId, evaluatedExpr, view.loadedThrough);
       if (result.kind !== 'nodeset') {
         return;
       }
@@ -99,14 +104,14 @@ export function XPathPanel({
       open={open}
       placement="right"
       styles={{ wrapper: { width: 440 } }}
-      title={t('xpath.title')}
+      title={isJson ? t('jsonpath.title') : t('xpath.title')}
     >
       <Space.Compact style={{ width: '100%' }}>
         <Input
           value={expression}
           onChange={(e) => setExpression(e.target.value)}
           onPressEnter={() => void evaluate()}
-          placeholder={t('xpath.example_placeholder')}
+          placeholder={isJson ? t('jsonpath.example_placeholder') : t('xpath.example_placeholder')}
           allowClear
           autoFocus
           style={{ fontFamily: 'monospace' }}
@@ -117,12 +122,31 @@ export function XPathPanel({
       </Space.Compact>
 
       <Typography.Text type="secondary" style={{ display: 'block', marginTop: 8, fontSize: 12 }}>
-        {t('xpath.context_label')}{' '}
-        <span style={{ fontFamily: 'monospace' }}>{contextLabel}</span> {t('xpath.context_hint')}
+        {isJson ? (
+          t('jsonpath.root_hint')
+        ) : (
+          <>
+            {t('xpath.context_label')}{' '}
+            <span style={{ fontFamily: 'monospace' }}>{contextLabel}</span> {t('xpath.context_hint')}
+          </>
+        )}
       </Typography.Text>
 
       {error && (
-        <Alert style={{ marginTop: 12 }} type="error" showIcon title={t('xpath.invalid_expression')} description={error} />
+        <Alert
+          style={{ marginTop: 12 }}
+          type="error"
+          showIcon
+          title={t('xpath.invalid_expression')}
+          description={
+            // JSONPath errors carry a caret excerpt that only lines up in monospace.
+            isJson ? (
+              <div style={{ fontFamily: 'monospace', whiteSpace: 'pre', overflowX: 'auto' }}>{error}</div>
+            ) : (
+              error
+            )
+          }
+        />
       )}
 
       {view.kind === 'scalar' && (
@@ -143,6 +167,9 @@ export function XPathPanel({
           </Typography.Text>
           <List
             size="small"
+            // Not antd's default (item.key): JSON results have a `key` field --
+            // their member name -- which repeats across matches.
+            rowKey="nodeId"
             dataSource={view.items}
             renderItem={(item) => (
               <List.Item
@@ -154,12 +181,15 @@ export function XPathPanel({
                   <Typography.Text style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
                     {item.label}
                   </Typography.Text>
-                  {item.value != null && (
+                  {/* XML: the element's text preview. JSON: where the match is --
+                      its label already includes any scalar value. */}
+                  {(isJson ? item.path : item.value) != null && (
                     <Typography.Text
                       type="secondary"
-                      style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}
+                      // Long paths have no spaces to wrap at.
+                      style={{ fontFamily: 'monospace', whiteSpace: 'pre-wrap', wordBreak: isJson ? 'break-all' : undefined }}
                     >
-                      {item.value}
+                      {isJson ? item.path : item.value}
                     </Typography.Text>
                   )}
                 </div>

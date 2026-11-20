@@ -1,6 +1,7 @@
 import { Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import LanguageSelect from "./LanguageSelect";
+import { SupportLinks } from "./SupportLinks";
 import ThemeSelect from "./ThemeSelect";
 
 const { Title, Paragraph } = Typography;
@@ -33,6 +34,10 @@ export default function HelpPanel() {
             {t('drag_drop_description')}
           </li>
         </ul>
+      </Paragraph>
+
+      <Paragraph>
+        <SupportLinks />
       </Paragraph>
 
     </Typography>

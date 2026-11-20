@@ -2,7 +2,11 @@ import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import react from '@vitejs/plugin-react';
 import { defineConfig, type Plugin } from 'vite';
-import { version } from './package.json';
+import pkg from './package.json' with { type: 'json' };
+
+// A JSON module only has a default export (no named `{ version }` import),
+// which Vite's native config loader requires.
+const { version } = pkg;
 
 function getGitHash() {
   try {

@@ -1,6 +1,7 @@
 {
   "actions": {
     "code": "Code",
+    "jsonpath": "JSONPath",
     "open_file": "Open File",
     "validate": "Validate",
     "xpath": "XPath"
@@ -8,18 +9,30 @@
   "about": "About",
   "app_description": "XML Explorer is an extremely fast, lightweight XML file viewer. It can handle extremely large XML files. It has been tested on files as big as 300MB. It allows fast viewing and exploration, copying of formatted XML data, evaluation of XPath expressions, and XSD schema validation.",
   "donate": "Donate",
-  "drag_drop_description": "Drag and drop an XML file from your computer into this page.",
+  "drag_drop_description": "Drag and drop an XML or JSON file from your computer into this page.",
   "drop_overlay": {
-    "prompt": "Drop XML file to open"
+    "prompt": "Drop XML or JSON file to open"
   },
   "get_started_intro": "Get started by doing one of the following:",
   "getting_started": "Getting Started",
+  "jsonpath": {
+    "example_placeholder": "JSONPath, e.g. $.store.book[?@.price < 10].title",
+    "root_hint": "Queries run against the whole document ($).",
+    "title": "Evaluate JSONPath"
+  },
   "language": "Language",
-  "open_file_instruction": "Click the 'Open File' button to select an XML file from your computer.",
+  "open_file_instruction": "Click the 'Open File' button to select an XML or JSON file from your computer.",
+  "star_on_github": "Star on GitHub",
+  "support_message": "XML Explorer is free and open source. If it's useful to you, please consider supporting its development.",
   "theme": "Theme",
   "tree": {
     "copy_failed": "Failed to copy: {{error}}",
+    "copy_formatted_json": "Copy Formatted JSON",
     "copy_formatted_xml": "Copy Formatted XML",
+    "json_items_one": "{{count, number}} item",
+    "json_items_other": "{{count, number}} items",
+    "json_keys_one": "{{count, number}} key",
+    "json_keys_other": "{{count, number}} keys",
     "load_more": "Load more... ({{remaining, number}} remaining)",
     "show_in_tree": "Show in tree"
   },
@@ -53,6 +66,10 @@
     "valid_title": "Document is valid",
     "warning_count_one": "{{count, number}} warning",
     "warning_count_other": "{{count, number}} warnings"
+  },
+  "view": {
+    "show_array_indexes": "Show array indexes",
+    "title": "View"
   },
   "xpath": {
     "context_hint": "— select a node in the tree to change it.",

@@ -27,6 +27,7 @@ describe('openDocument', () => {
     expect(invoke).toHaveBeenCalledWith('open_document_cmd', { path: '/some/file.xml' });
     expect(opened).toEqual({
       docId: 7,
+      format: 'xml',
       root: { nodeId: 0, nodeType: 'element', label: '<catalog>', hasChildren: true, value: null },
     });
   });

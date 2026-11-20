@@ -1,6 +1,7 @@
 {
   "actions": {
     "code": "Код",
+    "jsonpath": "JSONPath",
     "open_file": "Открыть файл",
     "validate": "Проверить",
     "xpath": "XPath"
@@ -8,18 +9,34 @@
   "about": "О программе",
   "app_description": "XML Explorer — это очень быстрый и легковесный просмотрщик XML-файлов. Он способен обрабатывать очень большие XML-файлы — протестирован на файлах размером до 300 МБ. Он позволяет быстро просматривать и изучать документы, копировать отформатированные данные XML, вычислять выражения XPath и проверять файлы по схеме XSD.",
   "donate": "Поддержать",
-  "drag_drop_description": "Перетащите XML-файл с компьютера на эту страницу.",
+  "drag_drop_description": "Перетащите XML- или JSON-файл с компьютера на эту страницу.",
   "drop_overlay": {
-    "prompt": "Отпустите XML-файл, чтобы открыть его"
+    "prompt": "Отпустите XML- или JSON-файл, чтобы открыть его"
   },
   "get_started_intro": "Чтобы начать, выполните одно из следующих действий:",
   "getting_started": "Начало работы",
+  "jsonpath": {
+    "example_placeholder": "JSONPath, например $.store.book[?@.price < 10].title",
+    "root_hint": "Запросы выполняются по всему документу ($).",
+    "title": "Вычислить JSONPath"
+  },
   "language": "Язык",
-  "open_file_instruction": "Нажмите кнопку «Открыть файл», чтобы выбрать XML-файл на компьютере.",
+  "open_file_instruction": "Нажмите кнопку «Открыть файл», чтобы выбрать XML- или JSON-файл на компьютере.",
+  "star_on_github": "Поставить звезду на GitHub",
+  "support_message": "XML Explorer — бесплатный проект с открытым исходным кодом. Если он вам полезен, пожалуйста, поддержите его разработку.",
   "theme": "Тема",
   "tree": {
     "copy_failed": "Не удалось скопировать: {{error}}",
+    "copy_formatted_json": "Скопировать отформатированный JSON",
     "copy_formatted_xml": "Скопировать отформатированный XML",
+    "json_items_few": "{{count, number}} элемента",
+    "json_items_many": "{{count, number}} элементов",
+    "json_items_one": "{{count, number}} элемент",
+    "json_items_other": "{{count, number}} элемента",
+    "json_keys_few": "{{count, number}} ключа",
+    "json_keys_many": "{{count, number}} ключей",
+    "json_keys_one": "{{count, number}} ключ",
+    "json_keys_other": "{{count, number}} ключа",
     "load_more": "Загрузить ещё... (осталось {{remaining, number}})",
     "show_in_tree": "Показать в дереве"
   },
@@ -57,6 +74,10 @@
     "warning_count_many": "{{count, number}} предупреждений",
     "warning_count_one": "{{count, number}} предупреждение",
     "warning_count_other": "{{count, number}} предупреждения"
+  },
+  "view": {
+    "show_array_indexes": "Показывать индексы массивов",
+    "title": "Вид"
   },
   "xpath": {
     "context_hint": "— выберите узел в дереве, чтобы изменить его.",

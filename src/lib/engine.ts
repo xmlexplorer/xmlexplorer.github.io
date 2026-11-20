@@ -9,6 +9,7 @@ import * as tauri from './tauri';
 import * as web from './webEngine';
 
 export type {
+  DocumentFormat,
   NodeType,
   NodeSummary,
   OpenedDocument,
@@ -30,6 +31,11 @@ export async function openDocument(source: string | File): Promise<OpenedDocumen
   if (isDesktop()) {
     if (typeof source !== 'string') {
       throw new Error('native openDocument expects a file path');
+    }
+    // The native engine is XML-only for now; fail clearly rather than with a
+    // libxml2 "Start tag expected" error.
+    if (/\.json$/i.test(source)) {
+      throw new Error('JSON files are not yet supported in the desktop app. Open them at https://xmlexplorer.github.io.');
     }
     return tauri.openDocument(source);
   }
@@ -55,7 +61,9 @@ export async function listNamespaces(docId: number): Promise<NamespaceDefinition
   return isDesktop() ? tauri.listNamespaces(docId) : web.listNamespaces(docId);
 }
 
-export async function evaluateXPath(
+// XPath for XML documents (relative to the context node `nodeId`), JSONPath for
+// JSON documents (always from the document root).
+export async function evaluateQuery(
   docId: number,
   nodeId: number,
   expression: string,
@@ -63,7 +71,7 @@ export async function evaluateXPath(
 ): Promise<XPathResult> {
   return isDesktop()
     ? tauri.evaluateXPath(docId, nodeId, expression, offset)
-    : web.evaluateXPath(docId, nodeId, expression, offset);
+    : web.evaluateQuery(docId, nodeId, expression, offset);
 }
 
 // Native-only: XSD schema validation needs libxml2 + filesystem access, which the
@@ -76,6 +84,7 @@ export async function validateDocument(docId: number): Promise<ValidationIssue[]
   return tauri.validateDocument(docId);
 }
 
-export async function getFormattedOuterXml(docId: number, nodeId: number): Promise<string> {
-  return isDesktop() ? tauri.getFormattedOuterXml(docId, nodeId) : web.getFormattedOuterXml(docId, nodeId);
+// The node pretty-printed in its document's own format: outer XML, or JSON.
+export async function getFormattedSource(docId: number, nodeId: number): Promise<string> {
+  return isDesktop() ? tauri.getFormattedOuterXml(docId, nodeId) : web.getFormattedSource(docId, nodeId);
 }
