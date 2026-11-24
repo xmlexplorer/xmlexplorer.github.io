@@ -16,7 +16,9 @@
     "lint": "eslint",
     "set-version": "node scripts/set-version.mjs",
     "native": "npx tauri dev --config native/tauri.conf.json",
-    "native:build": "npx tauri build --config native/tauri.conf.json"
+    "native:build": "npx tauri build --config native/tauri.conf.json",
+    "native:update": "npm update && cargo update --manifest-path native/Cargo.toml && npx tauri info",
+    "native:audit": "npm audit; cargo audit --file native/Cargo.lock"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
