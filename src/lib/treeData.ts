@@ -71,6 +71,10 @@ export function decodeLoadMoreKey(key: Key): { parentKey: string; offset: number
   return { parentKey: rest.slice(0, lastColon), offset: Number(rest.slice(lastColon + 1)) };
 }
 
+// Minimal shape of i18next's `t` that this module needs. `options` is required (every
+// call here passes interpolation values) so i18next's `TFunction` stays assignable to it.
+export type Translate = (key: string, options: Record<string, unknown>) => string;
+
 // `t` is i18next's translate function, passed in (rather than imported) so this
 // module stays free of any dependency on the app's i18n setup and is unit-testable
 // with a plain stub.
@@ -78,7 +82,7 @@ export function loadMoreNode(
   parentKey: Key,
   nextOffset: number,
   remaining: number,
-  t: (key: string, options?: Record<string, unknown>) => string,
+  t: Translate,
 ): TreeDataNode {
   return {
     key: encodeLoadMoreKey(parentKey, nextOffset),
@@ -153,7 +157,7 @@ export function mergePage(
   loadedThrough: number,
   total: number,
   hasMore: boolean,
-  t: (key: string, options?: Record<string, unknown>) => string,
+  t: Translate,
   closer?: TreeDataNode,
 ): TreeDataNode[] {
   const withoutPlaceholder = (existing ?? []).filter((n) => !isPlaceholderKey(n.key));
